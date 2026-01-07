@@ -8,7 +8,7 @@ import FinancialAnalytics from './components/FinancialAnalytics';
 import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
-import { Plus, Wallet, Check, Loader2, AlertCircle, RefreshCw, Sun, Cloud, Lock, Database } from 'lucide-react';
+import { Plus, Wallet, Check, Loader2, AlertCircle, RefreshCw, Sun, Cloud, Lock, Database, Pencil, Book } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co';
@@ -16,7 +16,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_FUNDS: Fund[] = [
-  { id: 'anak', name: 'Kas Anak', color: 'indigo', isMain: true },
+  { id: 'anak', name: 'Kas Anak', color: 'sky', isMain: true },
   { id: 'perpisahan', name: 'Kas Perpisahan', color: 'purple', isMain: false }
 ];
 
@@ -50,38 +50,30 @@ const App: React.FC = () => {
     setError(null);
     try {
       // 1. Fetch Classes Configuration
-      const { data: classData, error: classError } = await supabase.from('settings').select('value').eq('key', 'school_classes').maybeSingle();
-      if (classError) throw classError;
+      const { data: classData } = await supabase.from('settings').select('value').eq('key', 'school_classes').maybeSingle();
       if (classData && Array.isArray(classData.value)) {
         setClasses(classData.value);
       } else {
-        // Jika settings kosong, pastikan kita tetap punya B2
         setClasses([DEFAULT_CLASS]);
       }
 
-      // 2. Fetch Transactions (Mendukung data lama/legacy)
-      // Kita ambil data yang class_id-nya sesuai ATAU null (untuk data lama)
-      let query = supabase.from('transactions').select('*');
-      
-      if (selectedClassId === 'b2') {
-        // Khusus B2, kita ambil yang class_id='b2' ATAU class_id IS NULL
-        query = query.or(`class_id.eq.b2,class_id.is.null`);
-      } else {
-        query = query.eq('class_id', selectedClassId);
-      }
-
-      const { data: txData, error: txError } = await query.order('date', { ascending: false });
+      // 2. Fetch Transactions (Simple query for new start)
+      const { data: txData, error: txError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('class_id', selectedClassId)
+        .order('date', { ascending: false });
       
       if (txError) throw txError;
       
       setTransactions((txData || []).map(d => ({
         id: d.id, 
-        classId: d.class_id || 'b2', // Default ke b2 jika null
+        classId: d.class_id, 
         date: d.date, 
         description: d.description,
         amount: Number(d.amount), 
         type: d.type as TransactionType,
-        fundId: d.fund_id || (d.fund_category === 'perpisahan' ? 'perpisahan' : 'anak'), // Map dari kolom lama fund_category ke fundId
+        fundId: d.fund_id,
         category: d.category as Category, 
         recordedBy: d.recorded_by
       })));
@@ -92,8 +84,7 @@ const App: React.FC = () => {
       else setInitialBalances({ anak: 0, perpisahan: 0 });
 
     } catch (err: any) { 
-      console.error("Fetch Error:", err);
-      setError("Koneksi cloud terganggu. Menampilkan data lokal."); 
+      setError("Sinkronisasi cloud sedang bermasalah. Pastikan internet aktif."); 
     } finally { 
       setIsLoading(false); 
     }
@@ -123,11 +114,10 @@ const App: React.FC = () => {
         });
       }
 
-      const { error: insertError } = await supabase.from('transactions').insert(payloads);
-      if (insertError) throw insertError;
+      await supabase.from('transactions').insert(payloads);
       fetchData();
     } catch (err) { 
-      alert("Gagal catat transaksi. Periksa koneksi internet."); 
+      alert("Gagal catat transaksi."); 
     }
   };
 
@@ -148,30 +138,12 @@ const App: React.FC = () => {
     };
   }, [transactions, initialBalances, selectedClass]);
 
-  const handleTabChange = (tab: string) => {
-    if (tab === 'admin' && !isAdminAuthenticated) {
-      setIsAuthModalOpen(true);
-      return;
-    }
-    setActiveTab(tab);
-  };
-
-  const handleAdminLogin = (pass: string) => {
-    if (pass === 'admin123') { 
-      setIsAdminAuthenticated(true);
-      setIsAuthModalOpen(false);
-      setActiveTab('admin');
-    } else {
-      alert("Password salah!");
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white">
-        <div className="text-center animate-bounce">
-          <Sun className="text-amber-400 mx-auto mb-4" size={60} />
-          <p className="font-black text-amber-500 uppercase tracking-widest text-xs">Menyambungkan ke Cloud...</p>
+      <div className="h-screen flex items-center justify-center bg-sky-50">
+        <div className="text-center">
+          <Sun className="text-yellow-400 mx-auto mb-4 animate-spin duration-1000" size={60} />
+          <p className="font-black text-sky-500 uppercase tracking-widest text-xs">Membuka Sekolah...</p>
         </div>
       </div>
     );
@@ -179,38 +151,48 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-kids-pattern flex overflow-x-hidden">
-      <div className="blob bg-amber-200 -top-20 -left-20"></div>
-      <div className="blob bg-sky-200 bottom-0 -right-20" style={{animationDelay: '-5s'}}></div>
+      {/* Background Decorations */}
+      <div className="sun-bg"></div>
+      <div className="cloud top-[10%] left-[-100px] w-48 h-12" style={{animationDelay: '0s'}}></div>
+      <div className="cloud top-[40%] left-[-150px] w-64 h-16" style={{animationDelay: '15s'}}></div>
+      <div className="cloud top-[70%] left-[-120px] w-40 h-10" style={{animationDelay: '5s'}}></div>
+
+      {/* Floating School Doodles */}
+      <Pencil className="fixed bottom-10 right-10 text-sky-200/40 rotate-12 -z-10" size={100} />
+      <Book className="fixed top-20 left-72 text-yellow-200/40 -rotate-12 -z-10" size={120} />
 
       <Sidebar 
         activeTab={activeTab} 
-        onTabChange={handleTabChange} 
+        onTabChange={(tab) => {
+          if (tab === 'admin' && !isAdminAuthenticated) { setIsAuthModalOpen(true); return; }
+          setActiveTab(tab);
+        }} 
         classes={classes} 
         selectedClassId={selectedClassId} 
         onClassChange={setSelectedClassId} 
       />
       
       <main className="flex-1 md:ml-64 min-w-0 relative z-10">
-        <header className="sticky top-0 z-40 bg-white/60 backdrop-blur-xl border-b border-white/40 px-8 py-6 flex items-center justify-between shadow-sm">
+        <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-2xl border-b border-white/40 px-8 py-6 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-              Kelas {selectedClass.name} - {activeTab === 'dashboard' ? 'Overview' : activeTab === 'admin' ? 'Admin' : activeTab}
+              Kelas {selectedClass.name} - {activeTab.toUpperCase()}
               <Cloud className="text-sky-300 ml-1" size={24} />
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-sky-50 text-sky-600 rounded-2xl border border-sky-100">
                <Database size={14} />
-               <span className="text-[10px] font-black uppercase tracking-widest">{transactions.length} Transaksi</span>
+               <span className="text-[10px] font-black uppercase tracking-widest">{transactions.length} Data</span>
             </div>
             <button onClick={fetchData} className="p-3 text-slate-400 hover:text-sky-500 hover:bg-white rounded-2xl transition-all shadow-sm"><RefreshCw size={20} /></button>
-            <button onClick={() => setIsFormOpen(true)} className="bg-indigo-500 hover:bg-indigo-600 text-white px-7 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-200 text-[10px] uppercase tracking-widest transition-all active:scale-95"><Plus size={18} /> Catat Kas</button>
+            <button onClick={() => setIsFormOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-blue-200 text-[10px] uppercase tracking-widest transition-all active:scale-95"><Plus size={18} /> Catat Kas</button>
           </div>
         </header>
 
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-10">
           {error && (
-            <div className="bg-rose-100/80 backdrop-blur-sm border-2 border-rose-200 p-6 rounded-[2rem] flex items-start gap-4 shadow-lg shadow-rose-100">
+            <div className="bg-white/80 backdrop-blur-md border-2 border-rose-100 p-6 rounded-[2.5rem] flex items-start gap-4 shadow-lg shadow-rose-50 animate-in fade-in duration-300">
               <AlertCircle className="text-rose-500 mt-1" size={24} />
               <div>
                 <p className="font-black text-rose-800 text-xs uppercase tracking-widest">Waduh, Ada Masalah!</p>
@@ -251,18 +233,28 @@ const App: React.FC = () => {
       {/* Admin Auth Modal */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] w-full max-w-md p-10 text-center space-y-6 shadow-2xl border-4 border-indigo-100">
-            <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto text-indigo-600">
+          <div className="bg-white rounded-[3rem] w-full max-w-md p-10 text-center space-y-6 shadow-2xl border-4 border-sky-100">
+            <div className="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center mx-auto text-sky-600">
               <Lock size={40} />
             </div>
-            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Akses Terbatas</h3>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Pintu Terkunci</h3>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Masukkan Password Admin</p>
             <input 
               type="password" 
               placeholder="••••••••" 
               autoFocus
-              className="w-full p-5 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-indigo-400 outline-none font-black text-center" 
-              onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin(e.currentTarget.value)}
+              className="w-full p-5 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-sky-400 outline-none font-black text-center" 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (e.currentTarget.value === 'admin123') {
+                    setIsAdminAuthenticated(true);
+                    setIsAuthModalOpen(false);
+                    setActiveTab('admin');
+                  } else {
+                    alert("Password salah, sayang!");
+                  }
+                }
+              }}
             />
             <button onClick={() => setIsAuthModalOpen(false)} className="text-xs font-black text-slate-400 uppercase tracking-widest">Batal</button>
           </div>

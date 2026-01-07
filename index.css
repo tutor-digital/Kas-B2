@@ -8,36 +8,70 @@
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-sky-50;
-    background-image: radial-gradient(#cbd5e1 0.5px, transparent 0.5px);
-    background-size: 24px 24px;
+    background-color: #e0f2fe;
+    background-image: 
+      radial-gradient(at 0% 100%, #bae6fd 0px, transparent 50%),
+      radial-gradient(at 100% 0%, #fef08a 0px, transparent 50%);
+    overflow-x: hidden;
   }
 }
 
 .bg-kids-pattern {
-  background-color: #f0f9ff;
-  background-image:  
-    radial-gradient(at 0% 0%, hsla(199,100%,95%,1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(48,100%,95%,1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(338,100%,95%,1) 0, transparent 50%);
+  position: relative;
+  min-height: 100vh;
 }
 
-.blob {
+/* Animasi Awan */
+.cloud {
   position: fixed;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  filter: blur(80px);
+  background: white;
+  border-radius: 100px;
+  opacity: 0.6;
   z-index: -1;
-  opacity: 0.4;
-  animation: float 20s infinite alternate;
+  filter: blur(20px);
+  animation: float-horizontal 40s linear infinite;
 }
 
-@keyframes float {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(100px, 50px) scale(1.1); }
+@keyframes float-horizontal {
+  from { transform: translateX(-200px); }
+  to { transform: translateX(110vw); }
+}
+
+/* Matahari */
+.sun-bg {
+  position: fixed;
+  top: 40px;
+  right: 10%;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, #fde047 0%, #fbbf24 100%);
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.4;
+  z-index: -1;
+  animation: pulse-sun 10s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-sun {
+  from { transform: scale(1); opacity: 0.3; }
+  to { transform: scale(1.3); opacity: 0.5; }
 }
 
 .rounded-kids {
   border-radius: 2.5rem;
+}
+
+/* Custom Scrollbar Ceria */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #bae6fd;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7dd3fc;
 }
