@@ -1,13 +1,13 @@
 
 import React from 'react';
 import { Transaction, TransactionType, Fund } from '../types';
-import { Trash2, Tag, Calendar, Link as LinkIcon, User } from 'lucide-react';
+import { Trash2, Tag, Calendar, Sparkles, User, Layers } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
   funds: Fund[];
   onDelete: (id: string) => void;
-  isAdmin: boolean; // TAMBAHKAN INI
+  isAdmin: boolean;
 }
 
 const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, isAdmin }) => {
@@ -30,14 +30,17 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
     }
   };
 
-  const getFundInfo = (fundId: string) => funds.find(f => f.id === fundId.toLowerCase());
+  const getFundInfo = (fundId: string) => {
+    if (fundId === 'gabungan') return { id: 'gabungan', name: 'Gabungan', color: 'indigo' };
+    return funds.find(f => f.id === fundId.toLowerCase());
+  };
 
   return (
     <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl border border-white/60 overflow-hidden animate-in fade-in duration-500">
       <div className="p-10 border-b border-slate-50 flex items-center justify-between">
         <h2 className="font-black text-slate-800 uppercase tracking-widest text-sm">Riwayat Kas Sekolah</h2>
         {!isAdmin && (
-           <span className="text-[8px] font-black bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full uppercase tracking-widest">Read Only Mode</span>
+           <span className="text-[8px] font-black bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full uppercase tracking-widest">Hanya Lihat</span>
         )}
       </div>
       <div className="overflow-x-auto">
@@ -53,12 +56,12 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
           <tbody className="divide-y divide-slate-50">
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 4 : 3} className="px-10 py-20 text-center text-slate-300 text-xs font-black uppercase tracking-widest italic">Belum Ada Data Transaksi</td>
+                <td colSpan={isAdmin ? 4 : 3} className="px-10 py-20 text-center text-slate-300 text-xs font-black uppercase tracking-widest italic">Belum Ada Transaksi Terdeteksi</td>
               </tr>
             ) : (
               transactions.map((t) => {
                 const fund = getFundInfo(t.fundId);
-                const isSplit = t.recordedBy === 'Sistem Split';
+                const isSplit = t.fundId === 'gabungan';
                 
                 return (
                   <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
@@ -71,13 +74,19 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                     <td className="px-10 py-6">
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-3">
-                          <span className={`text-[8px] px-3 py-1 rounded-full font-black text-white uppercase tracking-widest shadow-sm ${fund?.id === 'perpisahan' ? 'bg-purple-600' : 'bg-indigo-500'}`}>
-                            {fund?.name || 'Kas'}
-                          </span>
+                          {isSplit ? (
+                            <span className="flex items-center gap-1.5 bg-gradient-to-r from-sky-500 to-purple-500 text-[8px] px-3 py-1 rounded-full font-black text-white uppercase tracking-widest shadow-md">
+                              <Layers size={10} /> Gabungan
+                            </span>
+                          ) : (
+                            <span className={`text-[8px] px-3 py-1 rounded-full font-black text-white uppercase tracking-widest shadow-sm ${fund?.id === 'perpisahan' ? 'bg-purple-600' : 'bg-indigo-500'}`}>
+                              {fund?.name || 'Kas'}
+                            </span>
+                          )}
                           <span className="text-sm font-black text-slate-700">{t.description}</span>
                           {isSplit && (
                             <span className="flex items-center gap-1 bg-amber-50 text-amber-600 text-[7px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-100">
-                              <LinkIcon size={8} /> Split 50/50
+                              <Sparkles size={8} /> Split 50/50
                             </span>
                           )}
                         </div>
