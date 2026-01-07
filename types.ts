@@ -6,7 +6,8 @@ export enum TransactionType {
 
 export enum FundCategory {
   ANAK = 'Kas Anak',
-  PERPISAHAN = 'Kas Perpisahan'
+  PERPISAHAN = 'Kas Perpisahan',
+  GABUNGAN = 'Gabungan'
 }
 
 export enum Category {

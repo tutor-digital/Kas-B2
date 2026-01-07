@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Transaction, TransactionType, FundCategory } from '../types';
-import { Trash2, Tag, Layers } from 'lucide-react';
+import { Trash2, Tag } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -22,6 +22,15 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onDel
       day: 'numeric',
       month: 'short'
     }).format(new Date(dateStr));
+  };
+
+  const getFundBadgeStyle = (fund: FundCategory) => {
+    switch (fund) {
+      case FundCategory.ANAK: return 'bg-indigo-500';
+      case FundCategory.PERPISAHAN: return 'bg-purple-600';
+      case FundCategory.GABUNGAN: return 'bg-gradient-to-r from-indigo-500 to-purple-600';
+      default: return 'bg-slate-400';
+    }
   };
 
   return (
@@ -53,10 +62,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onDel
                   <td className="px-8 py-5">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-black text-white uppercase tracking-tighter ${
-                          t.fundCategory === FundCategory.ANAK ? 'bg-indigo-500' : 'bg-purple-600'
-                        }`}>
-                          {t.fundCategory === FundCategory.ANAK ? 'Anak' : 'Perpisahan'}
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-black text-white uppercase tracking-tighter shadow-sm ${getFundBadgeStyle(t.fundCategory)}`}>
+                          {t.fundCategory === FundCategory.ANAK ? 'Anak' : t.fundCategory === FundCategory.PERPISAHAN ? 'Perpisahan' : 'Gabungan'}
                         </span>
                         <span className="text-sm font-bold text-slate-700">{t.description}</span>
                       </div>
