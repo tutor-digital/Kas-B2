@@ -8,7 +8,7 @@ import FinancialAnalytics from './components/FinancialAnalytics';
 import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
-import { Plus, Wallet, Check, Loader2, AlertCircle, RefreshCw, Sun, Cloud, Lock } from 'lucide-react';
+import { Plus, Wallet, Check, Loader2, AlertCircle, RefreshCw, Sun, Cloud, Lock, Database } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co';
@@ -47,29 +47,53 @@ const App: React.FC = () => {
 
   const fetchData = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      // Fetch Classes Configuration
-      const { data: classData } = await supabase.from('settings').select('value').eq('key', 'school_classes').maybeSingle();
-      if (classData) setClasses(classData.value);
+      // 1. Fetch Classes Configuration
+      const { data: classData, error: classError } = await supabase.from('settings').select('value').eq('key', 'school_classes').maybeSingle();
+      if (classError) throw classError;
+      if (classData && Array.isArray(classData.value)) {
+        setClasses(classData.value);
+      } else {
+        // Jika settings kosong, pastikan kita tetap punya B2
+        setClasses([DEFAULT_CLASS]);
+      }
 
-      // Fetch Transactions for current class
-      const { data: txData } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('class_id', selectedClassId)
-        .order('date', { ascending: false });
+      // 2. Fetch Transactions (Mendukung data lama/legacy)
+      // Kita ambil data yang class_id-nya sesuai ATAU null (untuk data lama)
+      let query = supabase.from('transactions').select('*');
+      
+      if (selectedClassId === 'b2') {
+        // Khusus B2, kita ambil yang class_id='b2' ATAU class_id IS NULL
+        query = query.or(`class_id.eq.b2,class_id.is.null`);
+      } else {
+        query = query.eq('class_id', selectedClassId);
+      }
+
+      const { data: txData, error: txError } = await query.order('date', { ascending: false });
+      
+      if (txError) throw txError;
       
       setTransactions((txData || []).map(d => ({
-        id: d.id, classId: d.class_id, date: d.date, description: d.description,
-        amount: Number(d.amount), type: d.type as TransactionType,
-        fundId: d.fund_id, category: d.category as Category, recordedBy: d.recorded_by
+        id: d.id, 
+        classId: d.class_id || 'b2', // Default ke b2 jika null
+        date: d.date, 
+        description: d.description,
+        amount: Number(d.amount), 
+        type: d.type as TransactionType,
+        fundId: d.fund_id || (d.fund_category === 'perpisahan' ? 'perpisahan' : 'anak'), // Map dari kolom lama fund_category ke fundId
+        category: d.category as Category, 
+        recordedBy: d.recorded_by
       })));
 
-      // Fetch Balances
+      // 3. Fetch Balances
       const { data: balData } = await supabase.from('settings').select('value').eq('key', `balances_${selectedClassId}`).maybeSingle();
       if (balData) setInitialBalances(balData.value);
-    } catch (err) { 
-      setError("Gagal sinkronisasi cloud."); 
+      else setInitialBalances({ anak: 0, perpisahan: 0 });
+
+    } catch (err: any) { 
+      console.error("Fetch Error:", err);
+      setError("Koneksi cloud terganggu. Menampilkan data lokal."); 
     } finally { 
       setIsLoading(false); 
     }
@@ -82,7 +106,6 @@ const App: React.FC = () => {
       const payloads = [];
       const baseId = Math.random().toString(36).substr(2, 9);
       
-      // Split Logic
       if (selectedClass.splitRule.enabled && newTx.category === selectedClass.splitRule.category && newTx.type === TransactionType.INCOME) {
         const amountPerFund = newTx.amount * selectedClass.splitRule.ratio;
         selectedClass.splitRule.targetFundIds.forEach((fId, idx) => {
@@ -100,9 +123,12 @@ const App: React.FC = () => {
         });
       }
 
-      await supabase.from('transactions').insert(payloads);
+      const { error: insertError } = await supabase.from('transactions').insert(payloads);
+      if (insertError) throw insertError;
       fetchData();
-    } catch (err) { alert("Gagal catat transaksi."); }
+    } catch (err) { 
+      alert("Gagal catat transaksi. Periksa koneksi internet."); 
+    }
   };
 
   const stats = useMemo((): SummaryStats => {
@@ -131,7 +157,7 @@ const App: React.FC = () => {
   };
 
   const handleAdminLogin = (pass: string) => {
-    if (pass === 'admin123') { // Simple pass for demo
+    if (pass === 'admin123') { 
       setIsAdminAuthenticated(true);
       setIsAuthModalOpen(false);
       setActiveTab('admin');
@@ -145,7 +171,7 @@ const App: React.FC = () => {
       <div className="h-screen flex items-center justify-center bg-white">
         <div className="text-center animate-bounce">
           <Sun className="text-amber-400 mx-auto mb-4" size={60} />
-          <p className="font-black text-amber-500 uppercase tracking-widest text-xs">Menyiapkan Sekolah...</p>
+          <p className="font-black text-amber-500 uppercase tracking-widest text-xs">Menyambungkan ke Cloud...</p>
         </div>
       </div>
     );
@@ -173,12 +199,27 @@ const App: React.FC = () => {
             </h2>
           </div>
           <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+               <Database size={14} />
+               <span className="text-[10px] font-black uppercase tracking-widest">{transactions.length} Transaksi</span>
+            </div>
             <button onClick={fetchData} className="p-3 text-slate-400 hover:text-sky-500 hover:bg-white rounded-2xl transition-all shadow-sm"><RefreshCw size={20} /></button>
             <button onClick={() => setIsFormOpen(true)} className="bg-indigo-500 hover:bg-indigo-600 text-white px-7 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-200 text-[10px] uppercase tracking-widest transition-all active:scale-95"><Plus size={18} /> Catat Kas</button>
           </div>
         </header>
 
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-10">
+          {error && (
+            <div className="bg-rose-100/80 backdrop-blur-sm border-2 border-rose-200 p-6 rounded-[2rem] flex items-start gap-4 shadow-lg shadow-rose-100">
+              <AlertCircle className="text-rose-500 mt-1" size={24} />
+              <div>
+                <p className="font-black text-rose-800 text-xs uppercase tracking-widest">Waduh, Ada Masalah!</p>
+                <p className="text-sm text-rose-700 mt-1 font-medium">{error}</p>
+                <button onClick={fetchData} className="mt-2 text-[10px] font-black uppercase text-rose-600 underline">Coba Lagi</button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <>
               <StatsCards stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} />
@@ -191,16 +232,17 @@ const App: React.FC = () => {
           {activeTab === 'admin' && (
             <AdminPanel 
               classes={classes} 
-              onUpdateClasses={(newClasses) => {
+              onUpdateClasses={async (newClasses) => {
                 setClasses(newClasses);
-                supabase.from('settings').upsert({key: 'school_classes', value: newClasses});
+                await supabase.from('settings').upsert({key: 'school_classes', value: newClasses});
               }}
               initialBalances={initialBalances}
-              onUpdateBalances={(newBals) => {
+              onUpdateBalances={async (newBals) => {
                 setInitialBalances(newBals);
-                supabase.from('settings').upsert({key: `balances_${selectedClassId}`, value: newBals});
+                await supabase.from('settings').upsert({key: `balances_${selectedClassId}`, value: newBals});
               }}
               selectedClass={selectedClass}
+              onRepair={fetchData}
             />
           )}
         </div>
@@ -218,6 +260,7 @@ const App: React.FC = () => {
             <input 
               type="password" 
               placeholder="••••••••" 
+              autoFocus
               className="w-full p-5 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-indigo-400 outline-none font-black text-center" 
               onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin(e.currentTarget.value)}
             />

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { SchoolClass, Fund, Category } from '../types';
-import { Plus, Trash2, Save, School, Coins, Split } from 'lucide-react';
+import { Plus, Trash2, Save, School, Coins, Split, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface AdminPanelProps {
   classes: SchoolClass[];
@@ -9,10 +9,12 @@ interface AdminPanelProps {
   onUpdateClasses: (classes: SchoolClass[]) => void;
   initialBalances: Record<string, number>;
   onUpdateBalances: (balances: Record<string, number>) => void;
+  onRepair: () => void;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdateClasses, initialBalances, onUpdateBalances }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdateClasses, initialBalances, onUpdateBalances, onRepair }) => {
   const [newClassName, setNewClassName] = useState('');
+  const [isRepairing, setIsRepairing] = useState(false);
 
   const handleAddClass = () => {
     if (!newClassName) return;
@@ -37,8 +39,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
     onUpdateBalances({ ...initialBalances, [fundId]: Number(val) });
   };
 
+  const handleForceRepair = async () => {
+    setIsRepairing(true);
+    // Kita panggil onRepair yang akan merefresh fetchData
+    await onRepair();
+    setTimeout(() => setIsRepairing(false), 1000);
+  };
+
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
+    <div className="space-y-10 animate-in fade-in duration-500 pb-20">
+      {/* System Status / Repair Tool */}
+      <section className="bg-amber-50/80 backdrop-blur-md rounded-[3rem] p-8 border-2 border-amber-200 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-amber-200 rounded-3xl text-amber-700"><AlertTriangle size={24} /></div>
+          <div>
+            <h3 className="text-lg font-black text-amber-900">Alat Pemulihan Data</h3>
+            <p className="text-xs font-bold text-amber-700">Jika data B2 hilang, gunakan tombol ini untuk sinkronisasi ulang dengan Cloud.</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleForceRepair}
+          disabled={isRepairing}
+          className={`flex items-center gap-2 px-8 py-4 bg-amber-600 text-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-amber-200 transition-all ${isRepairing ? 'opacity-50 animate-pulse' : 'hover:bg-amber-700 active:scale-95'}`}
+        >
+          <RefreshCw size={16} className={isRepairing ? 'animate-spin' : ''} />
+          {isRepairing ? 'Mensinkronkan...' : 'Sinkronisasi Ulang Cloud'}
+        </button>
+      </section>
+
       {/* 1. Kelola Kelas */}
       <section className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border border-white/60 shadow-xl">
         <div className="flex items-center gap-4 mb-8">
@@ -61,12 +89,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map(c => (
-            <div key={c.id} className="p-6 bg-slate-50 border border-slate-100 rounded-[2rem] flex justify-between items-center group">
-              <span className="font-black text-slate-700">Kelas {c.name}</span>
+            <div key={c.id} className={`p-6 border-2 rounded-[2rem] flex justify-between items-center group transition-all ${selectedClass.id === c.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+              <div className="flex flex-col">
+                <span className="font-black text-slate-700">Kelas {c.name}</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">ID: {c.id}</span>
+              </div>
               {c.id !== 'b2' && (
                 <button 
                   onClick={() => onUpdateClasses(classes.filter(item => item.id !== c.id))}
-                  className="text-slate-300 hover:text-rose-500 transition-colors"
+                  className="text-slate-300 hover:text-rose-500 transition-colors p-2"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -171,7 +202,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
         </div>
       </section>
       
-      <div className="flex justify-center pt-6 pb-20">
+      <div className="flex justify-center pt-6">
          <div className="bg-emerald-50 text-emerald-600 px-8 py-4 rounded-full flex items-center gap-3 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-100 animate-pulse">
             <Save size={16} /> Perubahan Disimpan Otomatis ke Cloud
          </div>
