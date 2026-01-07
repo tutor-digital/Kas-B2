@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { SchoolClass, Fund, Category } from '../types';
-import { Plus, Trash2, Save, School, Coins, Split, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Save, School, Coins, Split, RefreshCw, Database, Terminal } from 'lucide-react';
 
 interface AdminPanelProps {
   classes: SchoolClass[];
@@ -10,11 +10,13 @@ interface AdminPanelProps {
   initialBalances: Record<string, number>;
   onUpdateBalances: (balances: Record<string, number>) => void;
   onRepair: () => void;
+  dbStatus?: { connected: boolean; error: string | null };
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdateClasses, initialBalances, onUpdateBalances, onRepair }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdateClasses, initialBalances, onUpdateBalances, onRepair, dbStatus }) => {
   const [newClassName, setNewClassName] = useState('');
   const [isRepairing, setIsRepairing] = useState(false);
+  const [showSql, setShowSql] = useState(false);
 
   const handleAddClass = () => {
     if (!newClassName) return;
@@ -41,39 +43,88 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
 
   const handleForceRepair = async () => {
     setIsRepairing(true);
-    // Kita panggil onRepair yang akan merefresh fetchData
     await onRepair();
     setTimeout(() => setIsRepairing(false), 1000);
   };
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-20">
-      {/* System Status / Repair Tool */}
-      <section className="bg-amber-50/80 backdrop-blur-md rounded-[3rem] p-8 border-2 border-amber-200 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-amber-200 rounded-3xl text-amber-700"><AlertTriangle size={24} /></div>
-          <div>
-            <h3 className="text-lg font-black text-amber-900">Alat Pemulihan Data</h3>
-            <p className="text-xs font-bold text-amber-700">Jika data B2 hilang, gunakan tombol ini untuk sinkronisasi ulang dengan Cloud.</p>
+      
+      {/* Database Debugger Section */}
+      <section className={`rounded-[3rem] p-10 border-2 transition-all ${dbStatus?.connected ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+          <div className="flex items-center gap-4">
+            <div className={`p-4 rounded-3xl ${dbStatus?.connected ? 'bg-emerald-200 text-emerald-700' : 'bg-rose-200 text-rose-700'}`}>
+              <Database size={24} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">Status Database Cloud</h3>
+              <p className={`text-xs font-bold ${dbStatus?.connected ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {dbStatus?.connected ? 'Terhubung & Sinkron' : 'Perlu Perbaikan Schema'}
+              </p>
+            </div>
           </div>
+          <button 
+            onClick={handleForceRepair}
+            className="flex items-center gap-2 px-8 py-4 bg-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-sm border hover:bg-slate-50"
+          >
+            <RefreshCw size={16} className={isRepairing ? 'animate-spin' : ''} />
+            Tes Ulang Koneksi
+          </button>
         </div>
-        <button 
-          onClick={handleForceRepair}
-          disabled={isRepairing}
-          className={`flex items-center gap-2 px-8 py-4 bg-amber-600 text-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-amber-200 transition-all ${isRepairing ? 'opacity-50 animate-pulse' : 'hover:bg-amber-700 active:scale-95'}`}
-        >
-          <RefreshCw size={16} className={isRepairing ? 'animate-spin' : ''} />
-          {isRepairing ? 'Mensinkronkan...' : 'Sinkronisasi Ulang Cloud'}
-        </button>
+
+        {!dbStatus?.connected && (
+          <div className="space-y-4">
+            <div className="bg-white/60 p-6 rounded-[2rem] border border-rose-200">
+              <p className="text-[10px] font-black text-rose-800 uppercase tracking-widest mb-2">Pesan Error:</p>
+              <code className="text-xs font-mono text-rose-600 block bg-rose-100/50 p-4 rounded-xl">
+                {dbStatus?.error}
+              </code>
+            </div>
+            
+            <div className="pt-4">
+              <button onClick={() => setShowSql(!showSql)} className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors">
+                <Terminal size={14} />
+                {showSql ? 'Tutup Panduan' : 'Lihat Solusi Perbaikan (PENTING)'}
+              </button>
+              
+              {showSql && (
+                <div className="mt-4 p-8 bg-slate-900 rounded-[2.5rem] text-slate-300 animate-in slide-in-from-top-4 duration-300">
+                  <h4 className="text-sm font-black text-white mb-4 uppercase tracking-widest">Cara Memperbaiki Database:</h4>
+                  <ol className="text-xs space-y-4 list-decimal list-inside mb-6 font-medium leading-relaxed">
+                    <li>Buka <strong>SQL Editor</strong> di Dashboard Supabase Anda.</li>
+                    <li>Salin dan jalankan skrip di bawah untuk menambah kolom yang kurang (Data lama Anda tidak akan hilang):</li>
+                  </ol>
+                  <pre className="text-[10px] font-mono leading-relaxed bg-black/40 p-5 rounded-2xl overflow-x-auto text-emerald-400">
+{`/* Menambah kolom class_id & recorded_by yang kurang */
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS class_id TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS recorded_by TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS fund_id TEXT;
+
+/* Mengisi class_id untuk data yang sudah ada */
+UPDATE transactions SET class_id = 'b2' WHERE class_id IS NULL;
+
+/* Membuat tabel settings jika belum ada */
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value JSONB
+);`}
+                  </pre>
+                  <p className="text-[9px] mt-4 italic text-slate-500">Note: Setelah menjalankan SQL di atas, klik tombol "Tes Ulang Koneksi" di atas.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
-      {/* 1. Kelola Kelas */}
+      {/* Kelola Kelas & Saldo Awal (Tetap sama) */}
       <section className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border border-white/60 shadow-xl">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-4 bg-amber-100 rounded-3xl text-amber-600"><School size={24} /></div>
           <div>
             <h3 className="text-xl font-black text-slate-800">Daftar Kelas</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tambah atau hapus kelas sekolah</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tambah kelas sekolah lainnya</p>
           </div>
         </div>
         
@@ -81,45 +132,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
           <input 
             value={newClassName}
             onChange={(e) => setNewClassName(e.target.value)}
-            placeholder="Nama Kelas Baru (Contoh: B3)"
+            placeholder="Nama Kelas Baru"
             className="flex-1 p-5 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-amber-400 outline-none font-bold"
           />
-          <button onClick={handleAddClass} className="bg-amber-500 text-white px-8 rounded-3xl font-black flex items-center gap-2 shadow-lg shadow-amber-100 uppercase tracking-widest text-xs"><Plus size={18} /> Tambah</button>
+          <button onClick={handleAddClass} className="bg-amber-500 text-white px-8 rounded-3xl font-black flex items-center gap-2 uppercase tracking-widest text-xs">Tambah</button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map(c => (
-            <div key={c.id} className={`p-6 border-2 rounded-[2rem] flex justify-between items-center group transition-all ${selectedClass.id === c.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
-              <div className="flex flex-col">
-                <span className="font-black text-slate-700">Kelas {c.name}</span>
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">ID: {c.id}</span>
-              </div>
+            <div key={c.id} className={`p-6 border-2 rounded-[2rem] flex justify-between items-center transition-all ${selectedClass.id === c.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+              <span className="font-black text-slate-700">Kelas {c.name}</span>
               {c.id !== 'b2' && (
-                <button 
-                  onClick={() => onUpdateClasses(classes.filter(item => item.id !== c.id))}
-                  className="text-slate-300 hover:text-rose-500 transition-colors p-2"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <button onClick={() => onUpdateClasses(classes.filter(item => item.id !== c.id))} className="text-slate-300 hover:text-rose-500 p-2"><Trash2 size={18} /></button>
               )}
             </div>
           ))}
         </div>
       </section>
 
-      {/* 2. Pengaturan Kas & Dana */}
       <section className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border border-white/60 shadow-xl">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-4 bg-indigo-100 rounded-3xl text-indigo-600"><Coins size={24} /></div>
           <div>
-            <h3 className="text-xl font-black text-slate-800">Pengaturan Kas: {selectedClass.name}</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tentukan kantong dana & saldo awal</p>
+            <h3 className="text-xl font-black text-slate-800">Saldo Awal: Kelas {selectedClass.name}</h3>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo fisik di tangan bendahara</p>
           </div>
         </div>
 
         <div className="space-y-6">
           {selectedClass.funds.map(fund => (
-            <div key={fund.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            <div key={fund.id} className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Kas</label>
                 <input 
@@ -132,7 +174,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Saldo Awal</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Saldo Awal (Rp)</label>
                 <input 
                   type="number"
                   value={initialBalances[fund.id] || 0}
@@ -140,71 +182,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
                   className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-400 outline-none font-bold text-sm"
                 />
               </div>
-              <div className="flex gap-2">
-                 <button className="flex-1 bg-slate-100 text-slate-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed">Hapus</button>
-              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* 3. Aturan Pembagian (Split Rules) */}
-      <section className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border border-white/60 shadow-xl">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-4 bg-purple-100 rounded-3xl text-purple-600"><Split size={24} /></div>
-          <div>
-            <h3 className="text-xl font-black text-slate-800">Aturan Pembagian Uang</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Konfigurasi pembagian iuran otomatis</p>
-          </div>
-        </div>
-
-        <div className="space-y-8">
-          <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem]">
-            <div>
-              <p className="font-black text-slate-700">Aktifkan Pembagian Otomatis</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Uang masuk kategori tertentu akan dipecah</p>
-            </div>
-            <button 
-              onClick={() => handleUpdateCurrentClass({...selectedClass, splitRule: {...selectedClass.splitRule, enabled: !selectedClass.splitRule.enabled}})}
-              className={`w-14 h-8 rounded-full transition-all relative ${selectedClass.splitRule.enabled ? 'bg-indigo-500' : 'bg-slate-300'}`}
-            >
-              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${selectedClass.splitRule.enabled ? 'left-7' : 'left-1'}`}></div>
-            </button>
-          </div>
-
-          {selectedClass.splitRule.enabled && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-top-4 duration-300">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategori Pemicu</label>
-                <select 
-                  value={selectedClass.splitRule.category}
-                  onChange={(e) => handleUpdateCurrentClass({...selectedClass, splitRule: {...selectedClass.splitRule, category: e.target.value as Category}})}
-                  className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-indigo-400 outline-none font-bold text-sm"
-                >
-                  {Object.values(Category).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rasio Pembagian (%)</label>
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="range" min="10" max="90" step="5"
-                    value={selectedClass.splitRule.ratio * 100}
-                    onChange={(e) => handleUpdateCurrentClass({...selectedClass, splitRule: {...selectedClass.splitRule, ratio: Number(e.target.value)/100}})}
-                    className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                  />
-                  <span className="font-black text-slate-700 min-w-[3rem] text-center">{selectedClass.splitRule.ratio * 100}%</span>
-                </div>
-                <p className="text-[9px] text-slate-400 font-bold italic mt-1">Uang akan dibagi {selectedClass.splitRule.ratio * 100}% : {(1 - selectedClass.splitRule.ratio) * 100}%</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-      
       <div className="flex justify-center pt-6">
-         <div className="bg-emerald-50 text-emerald-600 px-8 py-4 rounded-full flex items-center gap-3 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-100 animate-pulse">
-            <Save size={16} /> Perubahan Disimpan Otomatis ke Cloud
+         <div className="bg-emerald-50 text-emerald-600 px-8 py-4 rounded-full flex items-center gap-3 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-100">
+            <Save size={16} /> Data Tersimpan Otomatis (Lokal & Cloud)
          </div>
       </div>
     </div>
