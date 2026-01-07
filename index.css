@@ -3,8 +3,41 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-sky-50;
+    background-image: radial-gradient(#cbd5e1 0.5px, transparent 0.5px);
+    background-size: 24px 24px;
+  }
+}
+
+.bg-kids-pattern {
+  background-color: #f0f9ff;
+  background-image:  
+    radial-gradient(at 0% 0%, hsla(199,100%,95%,1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(48,100%,95%,1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(338,100%,95%,1) 0, transparent 50%);
+}
+
+.blob {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: -1;
+  opacity: 0.4;
+  animation: float 20s infinite alternate;
+}
+
+@keyframes float {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(100px, 50px) scale(1.1); }
+}
+
+.rounded-kids {
+  border-radius: 2.5rem;
 }

@@ -1,15 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { NAV_ITEMS } from '../constants';
-import { Cloud, CloudOff } from 'lucide-react';
+import { Cloud, CloudOff, Sun, ChevronDown, School } from 'lucide-react';
+import { SchoolClass } from '../types';
 
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  classes: SchoolClass[];
+  selectedClassId: string;
+  onClassChange: (id: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, selectedClassId, onClassChange }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showClassList, setShowClassList] = useState(false);
 
   useEffect(() => {
     const handleStatus = () => setIsOnline(navigator.onLine);
@@ -21,45 +26,77 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     };
   }, []);
 
+  const selectedClass = classes.find(c => c.id === selectedClassId);
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
-      <div className="p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-indigo-400 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg shadow-indigo-100">
-            B2
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-white/90 backdrop-blur-md border-r border-white/40 hidden md:flex flex-col z-50">
+      <div className="p-8">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-100">
+            {selectedClass?.name.charAt(0) || 'S'}
           </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none">Kas B2</h1>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">School System</span>
+          <div className="flex-1">
+            <h1 className="text-xl font-black text-slate-800 tracking-tighter leading-none">Kas Sekolah</h1>
+            <span className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] mt-1 block">Taman Kanak-Kanak</span>
           </div>
+        </div>
+
+        {/* Class Selector */}
+        <div className="relative">
+          <button 
+            onClick={() => setShowClassList(!showClassList)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest hover:bg-slate-100 transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <School size={14} className="text-slate-400" />
+              Kelas {selectedClass?.name}
+            </div>
+            <ChevronDown size={14} className={`transition-transform ${showClassList ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {showClassList && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+              {classes.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => { onClassChange(c.id); setShowClassList(false); }}
+                  className={`w-full text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${selectedClassId === c.id ? 'bg-amber-50 text-amber-600' : 'text-slate-400 hover:bg-slate-50'}`}
+                >
+                  Kelas {c.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       
-      <nav className="flex-1 px-4 mt-4">
+      <nav className="flex-1 px-4 mt-2">
         <ul className="space-y-2">
           {NAV_ITEMS.map((item) => (
             <li key={item.id}>
               <button
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all ${
                   activeTab === item.id
-                    ? 'bg-indigo-50 text-indigo-600 font-bold'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 font-medium'
+                    ? 'bg-amber-100 text-amber-600 font-black shadow-inner'
+                    : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600 font-bold'
                 }`}
               >
-                {item.icon}
-                <span className="text-sm">{item.label}</span>
+                <div className={`${activeTab === item.id ? 'text-amber-500' : 'text-slate-300'}`}>
+                  {item.icon}
+                </div>
+                <span className="text-[10px] uppercase tracking-widest">{item.label}</span>
               </button>
             </li>
           ))}
         </ul>
       </nav>
 
-      <div className="p-6 border-t border-slate-100">
-        <div className={`flex items-center gap-2 ${isOnline ? 'text-emerald-500' : 'text-rose-500'}`}>
-          {isOnline ? <Cloud size={16} /> : <CloudOff size={16} />}
+      <div className="p-8 border-t border-slate-50 mt-auto">
+        <div className={`flex items-center gap-3 p-4 rounded-2xl ${isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'} transition-colors`}>
+          {isOnline ? <Sun size={18} className="animate-pulse" /> : <CloudOff size={18} />}
           <span className="text-[10px] font-black uppercase tracking-widest">
-            {isOnline ? 'Sistem Online' : 'Sistem Offline'}
+            {isOnline ? 'Online' : 'Offline'}
           </span>
         </div>
       </div>

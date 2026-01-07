@@ -4,12 +4,6 @@ export enum TransactionType {
   EXPENSE = 'EXPENSE'
 }
 
-export enum FundCategory {
-  ANAK = 'Kas Anak',
-  PERPISAHAN = 'Kas Perpisahan',
-  GABUNGAN = 'Gabungan'
-}
-
 export enum Category {
   DUES = 'Iuran Bulanan',
   DONATION = 'Sumbangan',
@@ -19,13 +13,35 @@ export enum Category {
   OTHER = 'Lain-lain'
 }
 
+export interface Fund {
+  id: string;
+  name: string;
+  color: string;
+  isMain: boolean;
+}
+
+export interface SplitRule {
+  enabled: boolean;
+  category: Category;
+  ratio: number; // e.g., 0.5 for 50/50
+  targetFundIds: string[];
+}
+
+export interface SchoolClass {
+  id: string;
+  name: string;
+  funds: Fund[];
+  splitRule: SplitRule;
+}
+
 export interface Transaction {
   id: string;
+  classId: string;
   date: string;
   description: string;
   amount: number;
   type: TransactionType;
-  fundCategory: FundCategory;
+  fundId: string; // Menggunakan ID dana dinamis
   category: Category;
   recordedBy: string;
 }
@@ -34,6 +50,5 @@ export interface SummaryStats {
   totalBalance: number;
   totalIncome: number;
   totalExpense: number;
-  balanceAnak: number;
-  balancePerpisahan: number;
+  fundBalances: Record<string, number>;
 }

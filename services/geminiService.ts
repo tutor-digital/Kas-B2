@@ -3,13 +3,15 @@ import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
 export const getFinancialInsights = async (transactions: Transaction[]) => {
+  // Create a new GoogleGenAI instance right before making an API call to ensure it always uses the most up-to-date API key.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const dataSummary = transactions.map(t => ({
     date: t.date,
     type: t.type,
     amount: t.amount,
-    fund: t.fundCategory,
+    // Fixed: Property 'fundCategory' does not exist on type 'Transaction'. Changed to 'fundId' which is available in the interface.
+    fund: t.fundId,
     category: t.category,
     description: t.description
   }));
@@ -39,6 +41,7 @@ export const getFinancialInsights = async (transactions: Transaction[]) => {
       },
     });
 
+    // The .text property returns the generated string directly. Do not call as a function.
     return response.text;
   } catch (error) {
     console.error("Gemini API Error:", error);
