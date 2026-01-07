@@ -176,7 +176,7 @@ const App: React.FC = () => {
       <main className="flex-1 md:ml-64 min-w-0">
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-5 flex items-center justify-between">
           <h2 className="text-xl font-black text-slate-800 tracking-tight">
-            {activeTab === 'dashboard' ? 'Overview Kas' : activeTab === 'transactions' ? 'Arsip Kas' : 'Analisis'}
+            {activeTab === 'dashboard' ? 'Laporan Kas B2' : activeTab === 'transactions' ? 'Arsip Kas' : 'Analisis'}
           </h2>
           <div className="flex items-center gap-3">
             <button onClick={fetchData} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all"><RefreshCw size={18} /></button>
