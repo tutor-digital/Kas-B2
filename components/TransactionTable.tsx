@@ -7,9 +7,10 @@ interface TransactionTableProps {
   transactions: Transaction[];
   funds: Fund[];
   onDelete: (id: string) => void;
+  isAdmin: boolean; // TAMBAHKAN INI
 }
 
-const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete }) => {
+const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, isAdmin }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -19,18 +20,25 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
   };
 
   const formatDate = (dateStr: string) => {
-    return new Intl.DateTimeFormat('id-ID', {
-      day: 'numeric',
-      month: 'short'
-    }).format(new Date(dateStr));
+    try {
+      return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short'
+      }).format(new Date(dateStr));
+    } catch {
+      return dateStr;
+    }
   };
 
   const getFundInfo = (fundId: string) => funds.find(f => f.id === fundId.toLowerCase());
 
   return (
-    <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl border border-white/60 overflow-hidden">
+    <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl border border-white/60 overflow-hidden animate-in fade-in duration-500">
       <div className="p-10 border-b border-slate-50 flex items-center justify-between">
         <h2 className="font-black text-slate-800 uppercase tracking-widest text-sm">Riwayat Kas Sekolah</h2>
+        {!isAdmin && (
+           <span className="text-[8px] font-black bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full uppercase tracking-widest">Read Only Mode</span>
+        )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
@@ -39,13 +47,13 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
               <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu</th>
               <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Detail & Kantong</th>
               <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</th>
-              <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Opsi</th>
+              {isAdmin && <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Opsi</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-10 py-20 text-center text-slate-300 text-xs font-black uppercase tracking-widest italic">Belum Ada Data Transaksi</td>
+                <td colSpan={isAdmin ? 4 : 3} className="px-10 py-20 text-center text-slate-300 text-xs font-black uppercase tracking-widest italic">Belum Ada Data Transaksi</td>
               </tr>
             ) : (
               transactions.map((t) => {
@@ -88,11 +96,13 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                         {t.type === TransactionType.INCOME ? '+' : '-'} {formatCurrency(t.amount)}
                       </span>
                     </td>
-                    <td className="px-10 py-6 text-right">
-                      <button onClick={() => onDelete(t.id)} className="text-slate-100 hover:text-rose-500 p-3 hover:bg-rose-50 rounded-2xl transition-all">
-                        <Trash2 size={18} />
-                      </button>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-10 py-6 text-right">
+                        <button onClick={() => onDelete(t.id)} className="text-slate-100 hover:text-rose-500 p-3 hover:bg-rose-50 rounded-2xl transition-all">
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })

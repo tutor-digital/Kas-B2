@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NAV_ITEMS } from '../constants';
-import { Cloud, CloudOff, Sun, ChevronDown, School } from 'lucide-react';
+import { CloudOff, Sun, ChevronDown, School, Lock, ShieldCheck, LogOut, User } from 'lucide-react';
 import { SchoolClass } from '../types';
 
 interface SidebarProps {
@@ -10,9 +10,11 @@ interface SidebarProps {
   classes: SchoolClass[];
   selectedClassId: string;
   onClassChange: (id: string) => void;
+  isAdmin: boolean;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, selectedClassId, onClassChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, selectedClassId, onClassChange, isAdmin, onLogout }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showClassList, setShowClassList] = useState(false);
 
@@ -38,6 +40,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, sele
           <div className="flex-1">
             <h1 className="text-xl font-black text-slate-800 tracking-tighter leading-none">Kas Sekolah</h1>
             <span className="text-[9px] font-black text-sky-500 uppercase tracking-[0.2em] mt-1 block">Taman Kanak-Kanak</span>
+          </div>
+        </div>
+
+        {/* User Info */}
+        <div className={`mb-6 p-4 rounded-3xl border transition-all ${isAdmin ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${isAdmin ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+              {isAdmin ? <ShieldCheck size={16} /> : <User size={16} />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Status</p>
+              <p className="text-[10px] font-black text-slate-800 truncate uppercase tracking-tighter">
+                {isAdmin ? 'Bendahara (Admin)' : 'User (View Only)'}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -74,26 +91,31 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, sele
         <ul className="space-y-2">
           {NAV_ITEMS.map((item) => {
             const isActive = activeTab === item.id;
+            const isRestricted = ['analytics', 'ai-assistant', 'admin'].includes(item.id);
+            const isLocked = isRestricted && !isAdmin;
             const isTransactions = item.id === 'transactions';
             
             return (
               <li key={item.id}>
                 <button
                   onClick={() => onTabChange(item.id)}
-                  className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all ${
+                  className={`w-full flex items-center justify-between px-5 py-3.5 rounded-2xl transition-all ${
                     isActive
                       ? isTransactions ? 'bg-blue-50 text-blue-600 shadow-inner' : 'bg-amber-100 text-amber-600 shadow-inner'
-                      : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600 font-bold'
+                      : isLocked ? 'text-slate-200 opacity-60 cursor-pointer hover:bg-slate-50' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600 font-bold'
                   }`}
                 >
-                  <div className={`${
-                    isActive 
-                      ? isTransactions ? 'text-blue-500' : 'text-amber-500'
-                      : 'text-slate-300'
-                  }`}>
-                    {item.icon}
+                  <div className="flex items-center gap-4">
+                    <div className={`${
+                      isActive 
+                        ? isTransactions ? 'text-blue-500' : 'text-amber-500'
+                        : isLocked ? 'text-slate-200' : 'text-slate-300'
+                    }`}>
+                      {item.icon}
+                    </div>
+                    <span className="text-[10px] uppercase tracking-widest font-black">{item.label}</span>
                   </div>
-                  <span className="text-[10px] uppercase tracking-widest font-black">{item.label}</span>
+                  {isLocked && <Lock size={12} className="text-slate-300" />}
                 </button>
               </li>
             );
@@ -101,7 +123,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, sele
         </ul>
       </nav>
 
-      <div className="p-8 border-t border-slate-50 mt-auto">
+      <div className="p-4 px-6 space-y-4 mb-4">
+        {isAdmin && (
+           <button 
+             onClick={onLogout}
+             className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-rose-500 hover:bg-rose-50 transition-all font-black text-[9px] uppercase tracking-widest"
+           >
+             <LogOut size={16} /> Keluar Admin
+           </button>
+        )}
+        
         <div className={`flex items-center gap-3 p-4 rounded-2xl ${isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'} transition-colors`}>
           {isOnline ? <Sun size={18} className="animate-pulse" /> : <CloudOff size={18} />}
           <span className="text-[10px] font-black uppercase tracking-widest">
