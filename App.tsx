@@ -33,16 +33,16 @@ const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null }>({ connected: true, error: null });
   
   const [classes, setClasses] = useState<SchoolClass[]>(() => {
-    const saved = localStorage.getItem('kas_classes_v5');
+    const saved = localStorage.getItem('kas_classes_v6');
     return saved ? JSON.parse(saved) : [DEFAULT_CLASS];
   });
   const [selectedClassId, setSelectedClassId] = useState('b2');
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('kas_transactions_v5');
+    const saved = localStorage.getItem('kas_transactions_v6');
     return saved ? JSON.parse(saved) : [];
   });
   const [initialBalances, setInitialBalances] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('kas_balances_v5');
+    const saved = localStorage.getItem('kas_balances_v6');
     return saved ? JSON.parse(saved) : {};
   });
   
@@ -54,15 +54,17 @@ const App: React.FC = () => {
     classes.find(c => c.id === selectedClassId) || classes[0], 
   [classes, selectedClassId]);
 
+  // Simpan ke LocalStorage sebagai cadangan offline
   useEffect(() => {
-    localStorage.setItem('kas_classes_v5', JSON.stringify(classes));
-    localStorage.setItem('kas_transactions_v5', JSON.stringify(transactions));
-    localStorage.setItem('kas_balances_v5', JSON.stringify(initialBalances));
+    localStorage.setItem('kas_classes_v6', JSON.stringify(classes));
+    localStorage.setItem('kas_transactions_v6', JSON.stringify(transactions));
+    localStorage.setItem('kas_balances_v6', JSON.stringify(initialBalances));
   }, [classes, transactions, initialBalances]);
 
   const fetchData = async () => {
     setIsSyncing(true);
     try {
+      // 1. Ambil Transaksi
       const { data: txData, error: tErr } = await supabase
         .from('transactions')
         .select('*')
@@ -70,9 +72,25 @@ const App: React.FC = () => {
       
       if (tErr) throw tErr;
       
+      // 2. Ambil Settings (Kelas & Saldo Awal)
+      const { data: settingsData, error: sErr } = await supabase
+        .from('settings')
+        .select('*');
+
+      if (sErr) {
+        console.warn("Tabel settings mungkin belum ada, silakan jalankan SQL di Admin Panel.");
+      } else if (settingsData) {
+        // Update Daftar Kelas
+        const savedClasses = settingsData.find(s => s.key === 'school_classes');
+        if (savedClasses) setClasses(savedClasses.value);
+
+        // Update Saldo Awal untuk kelas yang sedang aktif
+        const savedBalances = settingsData.find(s => s.key === `balances_${selectedClassId}`);
+        if (savedBalances) setInitialBalances(savedBalances.value);
+      }
+      
       if (txData) {
         setTransactions(txData.map(d => {
-          // Normalisasi Nama Kantong: Anak -> anak, Perpisahan -> perpisahan
           let fId = (d.fund_id || d.fund_category || 'anak').toLowerCase();
           if (fId === 'gabungan') fId = 'anak';
           
@@ -110,10 +128,9 @@ const App: React.FC = () => {
 
     if (shouldSplit) {
       const amountPerFund = newTx.amount * selectedClass.splitRule.ratio;
-      // WAJIB TERBAGI DUA (Index 0 & 1)
       selectedClass.splitRule.targetFundIds.forEach((fId, idx) => {
         const uniqueId = `${baseId}-${idx}`;
-        const displayFundName = fId.charAt(0).toUpperCase() + fId.slice(1); // "Anak" atau "Perpisahan"
+        const displayFundName = fId.charAt(0).toUpperCase() + fId.slice(1);
         
         const row = { 
           id: uniqueId, 
@@ -148,14 +165,11 @@ const App: React.FC = () => {
       localNewTxs.push({ ...newTx, id: baseId, classId: selectedClassId });
     }
 
-    // Update UI Instan
     setTransactions(prev => [...localNewTxs, ...prev]);
 
-    // Kirim ke Supabase
     const { error } = await supabase.from('transactions').insert(payloads);
     if (error) {
       setDbStatus({ connected: false, error: error.message });
-      // Jika gagal, coba tarik data ulang untuk memastikan sinkronisasi
       fetchData();
     } else {
       setDbStatus({ connected: true, error: null });
@@ -249,12 +263,12 @@ const App: React.FC = () => {
               classes={classes} 
               onUpdateClasses={(newClasses) => {
                 setClasses(newClasses);
-                supabase.from('settings').upsert({key: 'school_classes', value: newClasses});
+                supabase.from('settings').upsert({key: 'school_classes', value: newClasses}).then(() => {});
               }}
               initialBalances={initialBalances}
               onUpdateBalances={(newBals) => {
                 setInitialBalances(newBals);
-                supabase.from('settings').upsert({key: `balances_${selectedClassId}`, value: newBals});
+                supabase.from('settings').upsert({key: `balances_${selectedClassId}`, value: newBals}).then(() => {});
               }}
               selectedClass={selectedClass}
               onRepair={fetchData}
