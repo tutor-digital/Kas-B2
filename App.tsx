@@ -8,7 +8,7 @@ import FinancialAnalytics from './components/FinancialAnalytics';
 import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
-import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert } from 'lucide-react';
+import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, Eye } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co';
@@ -33,19 +33,20 @@ const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null }>({ connected: true, error: null });
   
   const [classes, setClasses] = useState<SchoolClass[]>(() => {
-    const saved = localStorage.getItem('kas_classes_v8');
+    const saved = localStorage.getItem('kas_classes_v9');
     return saved ? JSON.parse(saved) : [DEFAULT_CLASS];
   });
   const [selectedClassId, setSelectedClassId] = useState('b2');
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('kas_transactions_v8');
+    const saved = localStorage.getItem('kas_transactions_v9');
     return saved ? JSON.parse(saved) : [];
   });
   const [initialBalances, setInitialBalances] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('kas_balances_v8');
+    const saved = localStorage.getItem('kas_balances_v9');
     return saved ? JSON.parse(saved) : {};
   });
   
+  // ROLE STATE
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => localStorage.getItem('kas_admin_session') === 'active');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -54,9 +55,9 @@ const App: React.FC = () => {
   const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId) || classes[0], [classes, selectedClassId]);
 
   useEffect(() => {
-    localStorage.setItem('kas_classes_v8', JSON.stringify(classes));
-    localStorage.setItem('kas_transactions_v8', JSON.stringify(transactions));
-    localStorage.setItem('kas_balances_v8', JSON.stringify(initialBalances));
+    localStorage.setItem('kas_classes_v9', JSON.stringify(classes));
+    localStorage.setItem('kas_transactions_v9', JSON.stringify(transactions));
+    localStorage.setItem('kas_balances_v9', JSON.stringify(initialBalances));
   }, [classes, transactions, initialBalances]);
 
   const fetchData = async () => {
@@ -96,7 +97,10 @@ const App: React.FC = () => {
   useEffect(() => { fetchData(); }, [selectedClassId]);
 
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id' | 'classId'>) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) {
+      alert("Akses Ditolak: Anda harus login sebagai Admin untuk mencatat.");
+      return;
+    }
     
     const isSplit = selectedClass.splitRule.enabled && 
                     newTx.category === selectedClass.splitRule.category && 
@@ -104,7 +108,6 @@ const App: React.FC = () => {
 
     const txId = Math.random().toString(36).substr(2, 9);
     
-    // Simpan hanya 1 baris
     const payload = {
       id: txId,
       class_id: selectedClassId,
@@ -118,17 +121,17 @@ const App: React.FC = () => {
       recorded_by: 'Bendahara'
     };
 
-    // Optimistic Update UI
+    // Optimistic Update (Tampilkan dulu di layar agar user merasa cepat)
     const localTx = { ...newTx, id: txId, classId: selectedClassId, fundId: isSplit ? 'gabungan' : newTx.fundId };
     setTransactions(prev => [localTx, ...prev]);
 
-    // Kirim ke Supabase
+    // Simpan ke Cloud
     const { error } = await supabase.from('transactions').insert([payload]);
     
     if (error) {
-      console.error("Gagal menyimpan:", error);
-      alert("⚠️ Gagal menyimpan ke cloud: " + error.message + ". Pastikan tabel 'transactions' sudah memiliki kolom fund_id dan recorded_by.");
-      fetchData(); // Rollback data dari server jika gagal
+      console.error("Gagal menyimpan ke Supabase:", error);
+      alert(`⚠️ GAGAL SIMPAN KE CLOUD!\n\nPenyebab: ${error.message}\n\nSolusi: Buka menu 'Pengaturan Admin' dan jalankan perintah SQL Perbaikan Database yang ada di sana.`);
+      fetchData(); // Rollback (hapus data yang tadi pura-pura tersimpan karena gagal di server)
     } else {
       setDbStatus({ connected: true, error: null });
     }
@@ -136,15 +139,10 @@ const App: React.FC = () => {
 
   const stats = useMemo((): SummaryStats => {
     const fundBalances: Record<string, number> = {};
-    
     selectedClass.funds.forEach(f => {
       const base = initialBalances[f.id] || 0;
       const txSum = transactions.reduce((sum, t) => {
-        // Transaksi kantong kas spesifik
-        if (t.fundId === f.id) {
-          return t.type === TransactionType.INCOME ? sum + t.amount : sum - t.amount;
-        }
-        // Transaksi Gabungan (Split 50/50)
+        if (t.fundId === f.id) return t.type === TransactionType.INCOME ? sum + t.amount : sum - t.amount;
         if (t.fundId === 'gabungan' && selectedClass.splitRule.targetFundIds.includes(f.id)) {
           const splitAmount = t.amount * selectedClass.splitRule.ratio;
           return t.type === TransactionType.INCOME ? sum + splitAmount : sum - splitAmount;
@@ -153,12 +151,10 @@ const App: React.FC = () => {
       }, 0);
       fundBalances[f.id] = base + txSum;
     });
-
     return {
       totalIncome: transactions.filter(t => t.type === TransactionType.INCOME).reduce((s, t) => s + t.amount, 0),
       totalExpense: transactions.filter(t => t.type === TransactionType.EXPENSE).reduce((s, t) => s + t.amount, 0),
-      fundBalances,
-      totalBalance: Object.values(fundBalances).reduce((a, b) => a + b, 0)
+      fundBalances, totalBalance: Object.values(fundBalances).reduce((a, b) => a + b, 0)
     };
   }, [transactions, initialBalances, selectedClass]);
 
@@ -169,7 +165,7 @@ const App: React.FC = () => {
       setIsAuthModalOpen(false);
       if (pendingTab) { setActiveTab(pendingTab); setPendingTab(null); }
     } else {
-      alert("Password salah!");
+      alert("Password salah! Hanya bendahara yang memiliki akses.");
     }
   };
 
@@ -199,19 +195,28 @@ const App: React.FC = () => {
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            {!isAdminAuthenticated && (
-              <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-2xl border border-amber-100">
-                <ShieldAlert size={14} />
-                <span className="text-[9px] font-black uppercase tracking-widest">Mode Lihat Saja</span>
+            {!isAdminAuthenticated ? (
+              <div className="flex items-center gap-2 px-5 py-2.5 bg-amber-50 text-amber-600 rounded-2xl border border-amber-100 shadow-sm animate-in slide-in-from-right-4">
+                <Eye size={16} />
+                <span className="text-[10px] font-black uppercase tracking-[0.1em]">Mode Lihat Saja</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-5 py-2.5 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 shadow-sm">
+                <ShieldAlert size={16} />
+                <span className="text-[10px] font-black uppercase tracking-[0.1em]">Mode Bendahara</span>
               </div>
             )}
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${dbStatus.connected ? 'bg-sky-50 text-sky-600 border-sky-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+            
+            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border ${dbStatus.connected ? 'bg-sky-50 text-sky-600 border-sky-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
                {dbStatus.connected ? <Wifi size={14} /> : <WifiOff size={14} />}
-               <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? 'Sinkron...' : dbStatus.connected ? 'Cloud Aktif' : 'Error'}</span>
+               <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? 'Sinkron...' : dbStatus.connected ? 'Cloud Aktif' : 'Error Database'}</span>
             </div>
+            
             <button onClick={fetchData} className={`p-3 text-slate-400 hover:text-sky-500 hover:bg-white rounded-2xl transition-all ${isSyncing ? 'animate-spin' : ''}`}>
               <RefreshCw size={20} />
             </button>
+            
+            {/* Hanya Admin yang bisa melihat tombol Catat */}
             {isAdminAuthenticated && (
               <button onClick={() => setIsFormOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-blue-200 text-[10px] uppercase tracking-widest transition-all active:scale-95">
                 <Plus size={18} /> Catat Kas
@@ -224,21 +229,33 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && (
             <>
               <StatsCards stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} />
-              <TransactionTable transactions={transactions.slice(0, 10)} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onDelete={(id) => {
-                  if (confirm('Hapus transaksi ini?')) {
+              <TransactionTable 
+                transactions={transactions.slice(0, 10)} 
+                funds={selectedClass.funds} 
+                isAdmin={isAdminAuthenticated} 
+                onDelete={(id) => {
+                  if (confirm('Hapus transaksi ini secara permanen?')) {
                     setTransactions(prev => prev.filter(t => t.id !== id));
-                    supabase.from('transactions').delete().eq('id', id).then(() => {});
+                    supabase.from('transactions').delete().eq('id', id).then((res) => {
+                      if (res.error) alert("Gagal hapus di cloud: " + res.error.message);
+                    });
                   }
-              }} />
+                }} 
+              />
             </>
           )}
           {activeTab === 'transactions' && (
-            <TransactionTable transactions={transactions} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onDelete={(id) => {
+            <TransactionTable 
+              transactions={transactions} 
+              funds={selectedClass.funds} 
+              isAdmin={isAdminAuthenticated} 
+              onDelete={(id) => {
                 if (confirm('Hapus transaksi ini?')) {
                   setTransactions(prev => prev.filter(t => t.id !== id));
                   supabase.from('transactions').delete().eq('id', id).then(() => {});
                 }
-            }} />
+              }} 
+            />
           )}
           {activeTab === 'analytics' && <FinancialAnalytics transactions={transactions} />}
           {activeTab === 'ai-assistant' && <AIAssistant transactions={transactions} />}
@@ -256,18 +273,38 @@ const App: React.FC = () => {
         </div>
       </main>
 
+      {/* Auth Modal */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] w-full max-w-md p-10 text-center space-y-6 shadow-2xl border-4 border-sky-100">
-            <Lock size={40} className="mx-auto text-sky-600" />
+          <div className="bg-white rounded-[3rem] w-full max-w-md p-10 text-center space-y-6 shadow-2xl border-4 border-sky-100 animate-in zoom-in-95 duration-300">
+            <div className="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center mx-auto text-sky-600">
+              <Lock size={40} />
+            </div>
             <h3 className="text-2xl font-black text-slate-800 tracking-tight">Butuh Akses Admin</h3>
-            <input type="password" placeholder="••••••••" autoFocus className="w-full p-5 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-sky-400 outline-none font-black text-center text-xl tracking-widest" onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(e.currentTarget.value); }} />
-            <button onClick={() => setIsAuthModalOpen(false)} className="text-xs font-black text-slate-400 uppercase tracking-widest">Batal</button>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+              Hanya bendahara yang dapat mencatat atau mengubah data kas.
+            </p>
+            <input 
+              type="password" 
+              placeholder="••••••••" 
+              autoFocus 
+              className="w-full p-6 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-sky-400 outline-none font-black text-center text-2xl tracking-[0.5em]" 
+              onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(e.currentTarget.value); }} 
+            />
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={(e) => handleLogin((e.currentTarget.previousElementSibling as HTMLInputElement).value)}
+                className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all shadow-xl shadow-slate-100"
+              >
+                Masuk
+              </button>
+              <button onClick={() => { setIsAuthModalOpen(false); setPendingTab(null); }} className="text-xs font-black text-slate-400 uppercase tracking-widest py-3 hover:text-slate-600">Batal / Kembali</button>
+            </div>
           </div>
         </div>
       )}
 
-      {isFormOpen && <TransactionForm funds={selectedClass.funds} splitRule={selectedClass.splitRule} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
+      {isFormOpen && isAdminAuthenticated && <TransactionForm funds={selectedClass.funds} splitRule={selectedClass.splitRule} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
     </div>
   );
 };
