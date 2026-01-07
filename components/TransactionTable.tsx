@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Transaction, TransactionType, Fund } from '../types';
-import { Trash2, Tag, Calendar } from 'lucide-react';
+import { Trash2, Tag, Calendar, Link as LinkIcon, User } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -25,7 +25,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
     }).format(new Date(dateStr));
   };
 
-  const getFundInfo = (fundId: string) => funds.find(f => f.id === fundId);
+  const getFundInfo = (fundId: string) => funds.find(f => f.id === fundId.toLowerCase());
 
   return (
     <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl border border-white/60 overflow-hidden">
@@ -50,6 +50,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
             ) : (
               transactions.map((t) => {
                 const fund = getFundInfo(t.fundId);
+                const isSplit = t.recordedBy === 'Sistem Split';
+                
                 return (
                   <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-10 py-6 whitespace-nowrap">
@@ -61,14 +63,22 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                     <td className="px-10 py-6">
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-3">
-                          <span className={`text-[8px] px-3 py-1 rounded-full font-black text-white uppercase tracking-widest shadow-sm ${fund?.id === 'anak' ? 'bg-indigo-500' : 'bg-purple-600'}`}>
+                          <span className={`text-[8px] px-3 py-1 rounded-full font-black text-white uppercase tracking-widest shadow-sm ${fund?.id === 'perpisahan' ? 'bg-purple-600' : 'bg-indigo-500'}`}>
                             {fund?.name || 'Kas'}
                           </span>
                           <span className="text-sm font-black text-slate-700">{t.description}</span>
+                          {isSplit && (
+                            <span className="flex items-center gap-1 bg-amber-50 text-amber-600 text-[7px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-100">
+                              <LinkIcon size={8} /> Split 50/50
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                            <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest flex items-center gap-1">
                             <Tag size={10} /> {t.category}
+                          </span>
+                          <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest flex items-center gap-1">
+                            <User size={10} /> {t.recordedBy}
                           </span>
                         </div>
                       </div>

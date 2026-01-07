@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { PlusCircle, X, Info, Coins } from 'lucide-react';
+import { PlusCircle, X, Info, Coins, Sparkles } from 'lucide-react';
 import { Category, TransactionType, Transaction, Fund, SplitRule } from '../types';
 
 interface TransactionFormProps {
@@ -15,13 +15,16 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
     description: '',
     amount: '',
     type: TransactionType.INCOME,
-    fundId: funds[0]?.id || '',
+    fundId: funds[0]?.id || 'anak',
     category: Category.DUES,
     date: new Date().toISOString().split('T')[0],
     recordedBy: 'Bendahara'
   });
 
-  const isSplitActive = splitRule.enabled && formData.type === TransactionType.INCOME && formData.category === splitRule.category;
+  // PENGECEKAN AKTIF SPLIT YANG LEBIH TELITI
+  const isSplitActive = splitRule.enabled && 
+                       formData.type === TransactionType.INCOME && 
+                       formData.category === splitRule.category;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +38,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl overflow-hidden border-4 border-white">
+      <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl overflow-hidden border-4 border-white animate-in zoom-in-95 duration-300">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><PlusCircle size={24} /></div>
@@ -47,6 +50,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
         </div>
         
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          {/* Tampilan Kondisional Kantong Kas */}
           {!isSplitActive ? (
             <div>
               <label className="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">Pilih Kantong Kas</label>
@@ -68,12 +72,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
               </div>
             </div>
           ) : (
-            <div className="bg-amber-50 border-2 border-amber-100 p-5 rounded-[2rem] flex items-start gap-3">
-              <Info size={24} className="text-amber-500 shrink-0" />
+            <div className="bg-indigo-600 p-6 rounded-[2rem] flex items-start gap-4 shadow-xl shadow-indigo-100 animate-in fade-in slide-in-from-bottom-2">
+              <div className="p-2 bg-white/20 rounded-xl text-white">
+                <Sparkles size={20} />
+              </div>
               <div>
-                <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1">Split Otomatis Aktif!</p>
-                <p className="text-xs font-bold text-amber-700 leading-relaxed">
-                  Uang akan otomatis dibagi ke {funds.map(f => f.name).join(' & ')}.
+                <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Split 50/50 Aktif!</p>
+                <p className="text-xs font-bold text-white leading-relaxed">
+                  Karena ini adalah <span className="underline">{splitRule.category}</span>, uang akan otomatis dibagi dua ke <span className="text-indigo-200">Kas Anak & Perpisahan</span>.
                 </p>
               </div>
             </div>
@@ -84,7 +90,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
               type="button"
               onClick={() => setFormData({ ...formData, type: TransactionType.INCOME })}
               className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
-                formData.type === TransactionType.INCOME ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-50 text-slate-300'
+                formData.type === TransactionType.INCOME ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-inner' : 'border-slate-50 text-slate-300 bg-slate-50/30'
               }`}
             >
               Uang Masuk
@@ -93,7 +99,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
               type="button"
               onClick={() => setFormData({ ...formData, type: TransactionType.EXPENSE })}
               className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
-                formData.type === TransactionType.EXPENSE ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-50 text-slate-300'
+                formData.type === TransactionType.EXPENSE ? 'border-rose-500 bg-rose-50 text-rose-700 shadow-inner' : 'border-slate-50 text-slate-300 bg-slate-50/30'
               }`}
             >
               Uang Keluar
@@ -102,9 +108,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
 
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Keterangan Transaksi</label>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Keterangan</label>
               <input
-                required type="text" placeholder="Contoh: Iuran Bulanan Susi"
+                required type="text" placeholder="Contoh: Iuran Bulanan Ahmad"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-5 py-4 rounded-2xl border-2 border-slate-50 bg-slate-50/50 focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
@@ -126,7 +132,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, splitRule, onA
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value as Category })}
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-slate-50 bg-slate-50/50 focus:bg-white focus:border-indigo-500 outline-none transition-all font-black text-slate-700 text-xs"
+                  className="w-full px-5 py-4 rounded-2xl border-2 border-slate-50 bg-slate-50/50 focus:bg-white focus:border-indigo-500 outline-none transition-all font-black text-slate-700 text-[10px] uppercase tracking-wider"
                 >
                   {Object.values(Category).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>

@@ -8,7 +8,7 @@ import FinancialAnalytics from './components/FinancialAnalytics';
 import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
-import { Plus, RefreshCw, Sun, Cloud, Lock, Database, Pencil, Book, WifiOff, AlertCircle, Wifi } from 'lucide-react';
+import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co';
@@ -29,21 +29,20 @@ const DEFAULT_CLASS: SchoolClass = {
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null }>({ connected: true, error: null });
   
   const [classes, setClasses] = useState<SchoolClass[]>(() => {
-    const saved = localStorage.getItem('kas_classes_v3');
+    const saved = localStorage.getItem('kas_classes_v5');
     return saved ? JSON.parse(saved) : [DEFAULT_CLASS];
   });
   const [selectedClassId, setSelectedClassId] = useState('b2');
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('kas_transactions_v3');
+    const saved = localStorage.getItem('kas_transactions_v5');
     return saved ? JSON.parse(saved) : [];
   });
   const [initialBalances, setInitialBalances] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('kas_balances_v3');
+    const saved = localStorage.getItem('kas_balances_v5');
     return saved ? JSON.parse(saved) : {};
   });
   
@@ -56,44 +55,45 @@ const App: React.FC = () => {
   [classes, selectedClassId]);
 
   useEffect(() => {
-    localStorage.setItem('kas_classes_v3', JSON.stringify(classes));
-    localStorage.setItem('kas_transactions_v3', JSON.stringify(transactions));
-    localStorage.setItem('kas_balances_v3', JSON.stringify(initialBalances));
+    localStorage.setItem('kas_classes_v5', JSON.stringify(classes));
+    localStorage.setItem('kas_transactions_v5', JSON.stringify(transactions));
+    localStorage.setItem('kas_balances_v5', JSON.stringify(initialBalances));
   }, [classes, transactions, initialBalances]);
 
   const fetchData = async () => {
     setIsSyncing(true);
     try {
-      // Coba ambil data. Kita gunakan select('*') tanpa filter dulu untuk tes koneksi dasar
-      let query = supabase.from('transactions').select('*');
-      
-      // Jika error 'column class_id does not exist' muncul, kita akan menangkapnya di catch
-      const { data: txData, error: tErr } = await query
+      const { data: txData, error: tErr } = await supabase
+        .from('transactions')
+        .select('*')
         .order('date', { ascending: false });
       
       if (tErr) throw tErr;
       
       if (txData) {
-        setTransactions(txData.map(d => ({
-          id: d.id, 
-          classId: d.class_id || 'b2', // Fallback jika kolom class_id belum ada
-          date: d.date, 
-          description: d.description,
-          amount: Number(d.amount), 
-          type: d.type as TransactionType,
-          // Support kolom fund_category (dari DB user) atau fund_id (standard baru)
-          fundId: d.fund_id || (d.fund_category === 'Gabungan' ? 'anak' : d.fund_category) || 'anak',
-          category: d.category as Category, 
-          recordedBy: d.recorded_by || 'Sistem'
-        })));
+        setTransactions(txData.map(d => {
+          // Normalisasi Nama Kantong: Anak -> anak, Perpisahan -> perpisahan
+          let fId = (d.fund_id || d.fund_category || 'anak').toLowerCase();
+          if (fId === 'gabungan') fId = 'anak';
+          
+          return {
+            id: d.id, 
+            classId: d.class_id || 'b2', 
+            date: d.date, 
+            description: d.description,
+            amount: Number(d.amount), 
+            type: d.type as TransactionType,
+            fundId: fId,
+            category: d.category as Category, 
+            recordedBy: d.recorded_by || 'Sistem'
+          };
+        }));
         setDbStatus({ connected: true, error: null });
       }
     } catch (err: any) { 
-      console.error("Supabase Connection Error:", err);
-      setDbStatus({ connected: false, error: err.message || "Gagal memuat tabel" });
+      setDbStatus({ connected: false, error: err.message });
     } finally { 
       setIsSyncing(false);
-      setIsLoading(false); 
     }
   };
 
@@ -104,28 +104,62 @@ const App: React.FC = () => {
     const payloads: any[] = [];
     const localNewTxs: Transaction[] = [];
 
-    if (selectedClass.splitRule.enabled && newTx.category === selectedClass.splitRule.category && newTx.type === TransactionType.INCOME) {
+    const shouldSplit = selectedClass.splitRule.enabled && 
+                       newTx.category === selectedClass.splitRule.category && 
+                       newTx.type === TransactionType.INCOME;
+
+    if (shouldSplit) {
       const amountPerFund = newTx.amount * selectedClass.splitRule.ratio;
+      // WAJIB TERBAGI DUA (Index 0 & 1)
       selectedClass.splitRule.targetFundIds.forEach((fId, idx) => {
-        const id = `${baseId}-${idx}`;
-        payloads.push({ id, class_id: selectedClassId, date: newTx.date, description: newTx.description, amount: amountPerFund, type: newTx.type, fund_id: fId, category: newTx.category, recorded_by: 'Sistem Split' });
-        localNewTxs.push({ ...newTx, id, classId: selectedClassId, amount: amountPerFund, fundId: fId, recordedBy: 'Sistem Split' });
+        const uniqueId = `${baseId}-${idx}`;
+        const displayFundName = fId.charAt(0).toUpperCase() + fId.slice(1); // "Anak" atau "Perpisahan"
+        
+        const row = { 
+          id: uniqueId, 
+          class_id: selectedClassId, 
+          date: newTx.date, 
+          description: newTx.description, 
+          amount: amountPerFund, 
+          type: newTx.type, 
+          fund_id: fId, 
+          fund_category: displayFundName, 
+          category: newTx.category, 
+          recorded_by: 'Sistem Split' 
+        };
+        
+        payloads.push(row);
+        localNewTxs.push({ ...newTx, id: uniqueId, classId: selectedClassId, amount: amountPerFund, fundId: fId, recordedBy: 'Sistem Split' });
       });
     } else {
-      payloads.push({ id: baseId, class_id: selectedClassId, date: newTx.date, description: newTx.description, amount: newTx.amount, type: newTx.type, fund_id: newTx.fundId, category: newTx.category, recorded_by: 'Bendahara' });
+      const displayFundName = newTx.fundId.charAt(0).toUpperCase() + newTx.fundId.slice(1);
+      payloads.push({ 
+        id: baseId, 
+        class_id: selectedClassId, 
+        date: newTx.date, 
+        description: newTx.description, 
+        amount: newTx.amount, 
+        type: newTx.type, 
+        fund_id: newTx.fundId, 
+        fund_category: displayFundName,
+        category: newTx.category, 
+        recorded_by: 'Bendahara' 
+      });
       localNewTxs.push({ ...newTx, id: baseId, classId: selectedClassId });
     }
 
+    // Update UI Instan
     setTransactions(prev => [...localNewTxs, ...prev]);
 
-    supabase.from('transactions').insert(payloads).then(({ error }) => {
-      if (error) {
-        console.error("Insert Error:", error);
-        setDbStatus(prev => ({ ...prev, connected: false, error: error.message }));
-      } else {
-        setDbStatus({ connected: true, error: null });
-      }
-    });
+    // Kirim ke Supabase
+    const { error } = await supabase.from('transactions').insert(payloads);
+    if (error) {
+      setDbStatus({ connected: false, error: error.message });
+      // Jika gagal, coba tarik data ulang untuk memastikan sinkronisasi
+      fetchData();
+    } else {
+      setDbStatus({ connected: true, error: null });
+    }
   };
 
   const stats = useMemo((): SummaryStats => {
@@ -230,7 +264,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Admin Auth Modal */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[3rem] w-full max-w-md p-10 text-center space-y-6 shadow-2xl border-4 border-sky-100">
