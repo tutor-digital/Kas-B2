@@ -1,17 +1,19 @@
 
-import React, { useState, useRef } from 'react';
-import { PlusCircle, X, Info, Coins, Sparkles, User, Camera, FileText, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { PlusCircle, X, Info, Coins, Sparkles, User, Camera, FileText, Check, Pencil } from 'lucide-react';
 import { Category, TransactionType, Transaction, Fund, SplitRule } from '../types';
 
 interface TransactionFormProps {
   funds: Fund[];
   students: string[];
   splitRule: SplitRule;
+  initialData?: Transaction | null;
   onAdd: (transaction: Omit<Transaction, 'id' | 'classId'>) => void;
+  onUpdate?: (transaction: Transaction) => void;
   onClose: () => void;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, splitRule, onAdd, onClose }) => {
+const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, splitRule, initialData, onAdd, onUpdate, onClose }) => {
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
@@ -27,6 +29,22 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        description: initialData.description,
+        amount: initialData.amount.toString(),
+        type: initialData.type,
+        fundId: initialData.fundId,
+        category: initialData.category,
+        date: initialData.date,
+        recordedBy: initialData.recordedBy,
+        studentName: initialData.studentName || '',
+        attachmentUrl: initialData.attachmentUrl || ''
+      });
+    }
+  }, [initialData]);
+
   const isSplitActive = splitRule.enabled && 
                        formData.type === TransactionType.INCOME && 
                        formData.category === splitRule.category;
@@ -35,7 +53,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
     const file = e.target.files?.[0];
     if (file) {
       setIsUploading(true);
-      // Simulasi upload ke Cloud/Supabase Storage
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData({ ...formData, attachmentUrl: reader.result as string });
@@ -49,16 +66,21 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
     e.preventDefault();
     if (!formData.amount || !formData.description) return;
     
-    // Jika iuran dan ada nama siswa, deskripsi ditambahkan nama siswa agar lebih jelas
     const finalDescription = (formData.category === Category.DUES && formData.studentName)
-      ? `${formData.description} (${formData.studentName})`
+      ? `${formData.description.split(' (')[0]} (${formData.studentName})`
       : formData.description;
 
-    onAdd({
+    const transactionPayload = {
       ...formData,
       description: finalDescription,
       amount: Number(formData.amount),
-    });
+    };
+
+    if (initialData && onUpdate) {
+      onUpdate({ ...transactionPayload, id: initialData.id, classId: initialData.classId });
+    } else {
+      onAdd(transactionPayload);
+    }
     onClose();
   };
 
@@ -67,8 +89,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
       <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl overflow-hidden border-4 border-white animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
           <div className="flex items-center gap-3">
-             <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><PlusCircle size={24} /></div>
-             <h2 className="text-xl font-black text-slate-800">Catat Kas Baru</h2>
+             <div className={`p-2 rounded-xl ${initialData ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                {initialData ? <Pencil size={24} /> : <PlusCircle size={24} />}
+             </div>
+             <h2 className="text-xl font-black text-slate-800">{initialData ? 'Ubah Data Kas' : 'Catat Kas Baru'}</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white rounded-full text-slate-300 hover:text-slate-600 transition-all shadow-sm">
             <X size={20} />
@@ -97,7 +121,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
             </button>
           </div>
 
-          {/* Input Kategori & Nama Siswa (Jika Iuran) */}
           <div className="space-y-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Kategori Transaksi</label>
@@ -113,7 +136,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
             {formData.category === Category.DUES && (
               <div className="animate-in slide-in-from-top-2 duration-300">
                 <label className="block text-[10px] font-black text-indigo-500 mb-2 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <User size={12} /> Nama Siswa yang Bayar
+                  <User size={12} /> Nama Siswa
                 </label>
                 <select
                   required
@@ -124,28 +147,16 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
                   <option value="">-- Pilih Nama Siswa --</option>
                   {students.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <p className="text-[8px] font-bold text-slate-400 mt-2 italic px-1">*Pilih nama agar tercatat otomatis di daftar iuran.</p>
               </div>
             )}
           </div>
 
-          {isSplitActive && (
-            <div className="bg-indigo-600 p-6 rounded-[2rem] flex items-start gap-4 shadow-xl shadow-indigo-100 animate-in fade-in slide-in-from-bottom-2">
-              <div className="p-2 bg-white/20 rounded-xl text-white">
-                <Sparkles size={20} />
-              </div>
-              <p className="text-[10px] font-bold text-white leading-relaxed">
-                <span className="font-black uppercase tracking-widest">Split Aktif!</span> Iuran akan otomatis dibagi 50/50 ke Kas Anak & Perpisahan.
-              </p>
-            </div>
-          )}
-
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Keterangan / Deskripsi</label>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Keterangan</label>
               <input
-                required type="text" placeholder="Contoh: Iuran Bulan Agustus"
-                value={formData.description}
+                required type="text" placeholder="Keterangan transaksi..."
+                value={formData.description.split(' (')[0]}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-5 py-4 rounded-2xl border-2 border-slate-50 bg-slate-50/50 focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
               />
@@ -161,36 +172,18 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
               />
             </div>
             
-            {/* Fitur Upload untuk Pengeluaran */}
             {formData.type === TransactionType.EXPENSE && (
               <div className="pt-2">
-                <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Lampiran Bukti (Foto Nota)</label>
-                <input 
-                  type="file" accept="image/*" className="hidden" 
-                  ref={fileInputRef} onChange={handleFileChange} 
-                />
+                <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Bukti Foto</label>
+                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className={`w-full py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 transition-all ${
-                    formData.attachmentUrl 
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
-                    : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-500'
+                    formData.attachmentUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-400'
                   }`}
                 >
-                  {isUploading ? (
-                    <span className="animate-pulse">Mengunggah...</span>
-                  ) : formData.attachmentUrl ? (
-                    <>
-                      <Check size={18} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Foto Berhasil Dilampirkan</span>
-                    </>
-                  ) : (
-                    <>
-                      <Camera size={18} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Klik untuk Foto / Pilih File</span>
-                    </>
-                  )}
+                  {isUploading ? <span className="animate-pulse">Mengunggah...</span> : formData.attachmentUrl ? <><Check size={18} /><span>Foto Terlampir</span></> : <><Camera size={18} /><span>Ganti/Pilih Foto</span></>}
                 </button>
               </div>
             )}
@@ -198,9 +191,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
 
           <button
             type="submit"
-            className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-indigo-600 hover:shadow-xl hover:shadow-indigo-100 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px]"
+            className={`w-full text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px] shadow-xl ${
+              initialData ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-100' : 'bg-slate-900 hover:bg-indigo-600 shadow-indigo-100'
+            }`}
           >
-            <Coins size={20} /> Simpan Data Sekarang
+            {initialData ? <><Pencil size={20} /> Simpan Perubahan</> : <><Coins size={20} /> Simpan Data Baru</>}
           </button>
         </form>
       </div>

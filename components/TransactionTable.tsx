@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
 import { Transaction, TransactionType, Fund } from '../types';
-import { Trash2, Tag, Calendar, Sparkles, User, Layers, Image as ImageIcon, ExternalLink, X } from 'lucide-react';
+import { Trash2, Tag, Calendar, Sparkles, User, Layers, Image as ImageIcon, ExternalLink, X, Pencil } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
   funds: Fund[];
   onDelete: (id: string) => void;
+  onEdit: (transaction: Transaction) => void;
   isAdmin: boolean;
 }
 
-const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, isAdmin }) => {
+const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, onEdit, isAdmin }) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) => {
@@ -98,24 +99,33 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                         </span>
                       </td>
                       <td className="px-10 py-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1">
                           {t.attachmentUrl && (
                             <button 
                               onClick={() => setPreviewImage(t.attachmentUrl!)}
-                              className="text-indigo-400 hover:text-indigo-600 p-3 hover:bg-indigo-50 rounded-2xl transition-all"
+                              className="text-indigo-400 hover:text-indigo-600 p-2.5 hover:bg-indigo-50 rounded-xl transition-all"
                               title="Lihat Bukti Foto"
                             >
-                              <ImageIcon size={18} />
+                              <ImageIcon size={16} />
                             </button>
                           )}
                           {isAdmin && (
-                            <button 
-                              onClick={() => onDelete(t.id)} 
-                              className="text-slate-100 hover:text-rose-500 p-3 hover:bg-rose-50 rounded-2xl transition-all"
-                              title="Hapus Transaksi"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                            <>
+                              <button 
+                                onClick={() => onEdit(t)} 
+                                className="text-amber-400 hover:text-amber-600 p-2.5 hover:bg-amber-50 rounded-xl transition-all"
+                                title="Edit Transaksi"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button 
+                                onClick={() => onDelete(t.id)} 
+                                className="text-slate-200 hover:text-rose-500 p-2.5 hover:bg-rose-50 rounded-xl transition-all"
+                                title="Hapus Transaksi"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>

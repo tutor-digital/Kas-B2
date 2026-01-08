@@ -52,6 +52,7 @@ const App: React.FC = () => {
   
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => localStorage.getItem('kas_admin_session') === 'active');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingTab, setPendingTab] = useState<string | null>(null);
 
@@ -66,8 +67,8 @@ const App: React.FC = () => {
   const fetchData = async () => {
     setIsSyncing(true);
     try {
-      const { data: txData, error: tErr } = await supabase.from('transactions').select('*').order('date', { ascending: false });
-      const { data: settingsData, error: sErr } = await supabase.from('settings').select('*');
+      const { data: txData } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+      const { data: settingsData } = await supabase.from('settings').select('*');
 
       if (settingsData) {
         const savedClasses = settingsData.find(s => s.key === 'school_classes');
@@ -116,6 +117,31 @@ const App: React.FC = () => {
     setTransactions(prev => [{ ...newTx, id: txId, classId: selectedClassId, fundId: isSplit ? 'gabungan' : newTx.fundId }, ...prev]);
     const { error } = await supabase.from('transactions').insert([payload]);
     if (error) { alert("Gagal Simpan ke Cloud: " + error.message); fetchData(); }
+  };
+
+  const handleUpdateTransaction = async (updatedTx: Transaction) => {
+    if (!isAdminAuthenticated) return;
+    const isSplit = selectedClass.splitRule.enabled && updatedTx.category === selectedClass.splitRule.category && updatedTx.type === TransactionType.INCOME;
+    
+    const finalFundId = isSplit ? 'gabungan' : updatedTx.fundId;
+    const finalTx = { ...updatedTx, fundId: finalFundId };
+
+    setTransactions(prev => prev.map(t => t.id === finalTx.id ? finalTx : t));
+
+    const payload = {
+      description: finalTx.description,
+      amount: finalTx.amount,
+      type: finalTx.type,
+      fund_id: finalTx.fundId,
+      category: finalTx.category,
+      student_name: finalTx.studentName,
+      attachment_url: finalTx.attachmentUrl,
+      date: finalTx.date
+    };
+
+    const { error } = await supabase.from('transactions').update(payload).eq('id', finalTx.id);
+    if (error) { alert("Gagal Update ke Cloud: " + error.message); fetchData(); }
+    setEditingTransaction(null);
   };
 
   const stats = useMemo((): SummaryStats => {
@@ -195,10 +221,7 @@ const App: React.FC = () => {
       <main className="flex-1 md:ml-64 min-w-0 relative z-10 transition-all">
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-white/40 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
-            >
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
               <Menu size={24} />
             </button>
             <div className="flex flex-col">
@@ -212,10 +235,7 @@ const App: React.FC = () => {
 
           <div className="flex items-center gap-2 md:gap-3">
             {!isAdminAuthenticated ? (
-              <button 
-                onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-amber-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-amber-200 hover:bg-amber-600 transition-all active:scale-95 text-[9px] md:text-[10px] font-black uppercase tracking-widest"
-              >
+              <button onClick={() => setIsAuthModalOpen(true)} className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-amber-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-amber-200 hover:bg-amber-600 transition-all active:scale-95 text-[9px] md:text-[10px] font-black uppercase tracking-widest">
                 <Lock size={14} className="md:size-[16px]" />
                 <span className="hidden sm:inline">Bendahara</span>
                 <span className="sm:hidden">Login</span>
@@ -232,7 +252,7 @@ const App: React.FC = () => {
             </button>
             
             {isAdminAuthenticated && (
-              <button onClick={() => setIsFormOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 md:px-7 py-2 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-200 text-[9px] md:text-[10px] uppercase tracking-widest transition-all active:scale-95">
+              <button onClick={() => { setEditingTransaction(null); setIsFormOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 md:px-7 py-2 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-200 text-[9px] md:text-[10px] uppercase tracking-widest transition-all active:scale-95">
                 <Plus size={18} /> <span className="hidden sm:inline">Catat Kas</span>
               </button>
             )}
@@ -243,7 +263,7 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && (
             <>
               <StatsCards stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} />
-              <TransactionTable transactions={transactions.slice(0, 10)} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onDelete={(id) => {
+              <TransactionTable transactions={transactions.slice(0, 10)} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onEdit={(tx) => { setEditingTransaction(tx); setIsFormOpen(true); }} onDelete={(id) => {
                   if (confirm('Hapus permanen data ini?')) {
                     setTransactions(prev => prev.filter(t => t.id !== id));
                     supabase.from('transactions').delete().eq('id', id).then(() => {});
@@ -252,15 +272,10 @@ const App: React.FC = () => {
             </>
           )}
           {activeTab === 'report' && (
-            <CashReport 
-              stats={stats} 
-              selectedClass={selectedClass} 
-              initialBalances={initialBalances} 
-              transactions={transactions} 
-            />
+            <CashReport stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} transactions={transactions} />
           )}
           {activeTab === 'transactions' && (
-            <TransactionTable transactions={transactions} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onDelete={(id) => {
+            <TransactionTable transactions={transactions} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onEdit={(tx) => { setEditingTransaction(tx); setIsFormOpen(true); }} onDelete={(id) => {
                 if (confirm('Hapus transaksi?')) {
                   setTransactions(prev => prev.filter(t => t.id !== id));
                   supabase.from('transactions').delete().eq('id', id).then(() => {});
@@ -305,7 +320,17 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {isFormOpen && <TransactionForm funds={selectedClass.funds} students={selectedClass.students || []} splitRule={selectedClass.splitRule} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
+      {isFormOpen && (
+        <TransactionForm 
+          funds={selectedClass.funds} 
+          students={selectedClass.students || []} 
+          splitRule={selectedClass.splitRule} 
+          initialData={editingTransaction}
+          onAdd={handleAddTransaction} 
+          onUpdate={handleUpdateTransaction}
+          onClose={() => { setIsFormOpen(false); setEditingTransaction(null); }} 
+        />
+      )}
     </div>
   );
 };
