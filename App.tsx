@@ -9,7 +9,7 @@ import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import CashReport from './components/CashReport';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
-import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, LogIn, Menu, X } from 'lucide-react';
+import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, LogIn, Menu, X, AlertCircle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co';
@@ -33,7 +33,11 @@ const DEFAULT_CLASS: SchoolClass = {
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null }>({ connected: true, error: null });
+  const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null; needsUpdate: boolean }>({ 
+    connected: true, 
+    error: null,
+    needsUpdate: false
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [classes, setClasses] = useState<SchoolClass[]>(() => {
@@ -67,7 +71,7 @@ const App: React.FC = () => {
   const fetchData = async () => {
     setIsSyncing(true);
     try {
-      const { data: txData } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+      const { data: txData, error: txError } = await supabase.from('transactions').select('*').order('date', { ascending: false });
       const { data: settingsData } = await supabase.from('settings').select('*');
 
       if (settingsData) {
@@ -91,16 +95,30 @@ const App: React.FC = () => {
           studentName: d.student_name,
           attachmentUrl: d.attachment_url
         })));
-        setDbStatus({ connected: true, error: null });
+        setDbStatus({ connected: true, error: null, needsUpdate: false });
+      }
+
+      if (txError && txError.message.includes('column')) {
+        setDbStatus(prev => ({ ...prev, needsUpdate: true }));
       }
     } catch (err: any) { 
-      setDbStatus({ connected: false, error: err.message });
+      setDbStatus({ connected: false, error: err.message, needsUpdate: err.message.includes('column') });
     } finally { 
       setIsSyncing(false);
     }
   };
 
   useEffect(() => { fetchData(); }, [selectedClassId]);
+
+  const handleDbError = (error: any) => {
+    if (error.message.includes('column') || error.message.includes('attachment_url')) {
+      alert("⚠️ Error Database: Struktur tabel di Cloud belum diupdate. Silakan buka menu 'Pengaturan Admin' untuk instruksi perbaikan.");
+      setDbStatus(prev => ({ ...prev, needsUpdate: true }));
+    } else {
+      alert("Gagal Simpan ke Cloud: " + error.message);
+    }
+    fetchData();
+  };
 
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id' | 'classId'>) => {
     if (!isAdminAuthenticated) return;
@@ -116,7 +134,7 @@ const App: React.FC = () => {
 
     setTransactions(prev => [{ ...newTx, id: txId, classId: selectedClassId, fundId: isSplit ? 'gabungan' : newTx.fundId }, ...prev]);
     const { error } = await supabase.from('transactions').insert([payload]);
-    if (error) { alert("Gagal Simpan ke Cloud: " + error.message); fetchData(); }
+    if (error) handleDbError(error);
   };
 
   const handleUpdateTransaction = async (updatedTx: Transaction) => {
@@ -140,7 +158,7 @@ const App: React.FC = () => {
     };
 
     const { error } = await supabase.from('transactions').update(payload).eq('id', finalTx.id);
-    if (error) { alert("Gagal Update ke Cloud: " + error.message); fetchData(); }
+    if (error) handleDbError(error);
     setEditingTransaction(null);
   };
 
@@ -219,6 +237,16 @@ const App: React.FC = () => {
       />
       
       <main className="flex-1 md:ml-64 min-w-0 relative z-10 transition-all">
+        {dbStatus.needsUpdate && (
+          <div className="bg-rose-600 text-white px-8 py-3 flex items-center justify-between animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={20} />
+              <p className="text-[10px] font-black uppercase tracking-widest">Peringatan: Database Cloud Perlu Diperbarui!</p>
+            </div>
+            <button onClick={() => setActiveTab('admin')} className="bg-white text-rose-600 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg">Lihat Cara Perbaiki</button>
+          </div>
+        )}
+
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-white/40 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
             <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">

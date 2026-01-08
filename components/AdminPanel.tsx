@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { SchoolClass, Fund, Category } from '../types';
-import { Plus, Trash2, Save, School, Coins, Split, RefreshCw, Database, Terminal, CheckCircle2, AlertTriangle, Users, Power } from 'lucide-react';
+import { Plus, Trash2, Save, School, Coins, Split, RefreshCw, Database, Terminal, CheckCircle2, AlertTriangle, Users, Power, Copy, Check } from 'lucide-react';
 
 interface AdminPanelProps {
   classes: SchoolClass[];
@@ -10,12 +10,24 @@ interface AdminPanelProps {
   initialBalances: Record<string, number>;
   onUpdateBalances: (balances: Record<string, number>) => void;
   onRepair: () => void;
-  dbStatus?: { connected: boolean; error: string | null };
+  dbStatus?: { connected: boolean; error: string | null; needsUpdate?: boolean };
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdateClasses, initialBalances, onUpdateBalances, onRepair, dbStatus }) => {
   const [newClassName, setNewClassName] = useState('');
   const [isRepairing, setIsRepairing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const sqlCode = `/* Jalankan di SQL Editor Supabase */
+ALTER TABLE transactions 
+ADD COLUMN IF NOT EXISTS student_name TEXT,
+ADD COLUMN IF NOT EXISTS attachment_url TEXT;`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(sqlCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleAddClass = () => {
     if (!newClassName) return;
@@ -53,6 +65,55 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-20">
       
+      {/* Database Status & Repair - Highlight if needs update */}
+      <section className={`rounded-[3rem] p-10 border-4 transition-all ${dbStatus?.needsUpdate ? 'bg-rose-50 border-rose-500 shadow-2xl shadow-rose-200' : dbStatus?.connected ? 'bg-emerald-50 border-emerald-100 shadow-xl' : 'bg-amber-50 border-amber-200'}`}>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+          <div className="flex items-center gap-4">
+            <div className={`p-4 rounded-3xl ${dbStatus?.needsUpdate ? 'bg-rose-600 text-white animate-bounce' : dbStatus?.connected ? 'bg-emerald-200 text-emerald-700' : 'bg-amber-500 text-white animate-pulse'}`}>
+              {dbStatus?.needsUpdate ? <AlertTriangle size={24} /> : dbStatus?.connected ? <CheckCircle2 size={24} /> : <AlertTriangle size={24} />}
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">Status Server Cloud</h3>
+              <p className={`text-[10px] font-black uppercase tracking-widest ${dbStatus?.needsUpdate ? 'text-rose-600' : dbStatus?.connected ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {dbStatus?.needsUpdate ? '⚠️ STRUKTUR TABEL PERLU DIPERBAIKI' : dbStatus?.connected ? 'Terhubung Sempurna' : 'Perlu Sinkronisasi Ulang'}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => { setIsRepairing(true); onRepair(); setTimeout(() => setIsRepairing(false), 1000); }}
+            className="flex items-center gap-2 px-8 py-4 bg-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-95"
+          >
+            <RefreshCw size={16} className={isRepairing ? 'animate-spin' : ''} />
+            Cek Koneksi Ulang
+          </button>
+        </div>
+
+        {(dbStatus?.needsUpdate || !dbStatus?.connected) && (
+          <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
+             <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-3">
+                    <Terminal size={20} className="text-rose-400" /> Solusi Perbaikan (Copy & Paste ke Supabase)
+                  </h4>
+                  <button 
+                    onClick={handleCopy}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${copied ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                  >
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                    {copied ? 'Berhasil Dicopy!' : 'Salin Kode'}
+                  </button>
+                </div>
+                <p className="text-slate-400 text-[10px] mb-4 font-bold leading-relaxed">
+                  Langkah: Buka Supabase Dashboard > SQL Editor > Paste kode di bawah > Klik Run.
+                </p>
+                <pre className="text-[11px] font-mono leading-relaxed bg-black/50 p-6 rounded-2xl overflow-x-auto text-emerald-400 border border-white/5 shadow-inner">
+{sqlCode}
+                </pre>
+             </div>
+          </div>
+        )}
+      </section>
+
       {/* Kelola Kelas & Status Aktif */}
       <section className="bg-white/80 backdrop-blur-md rounded-[3rem] p-10 border border-white/60 shadow-xl">
         <div className="flex items-center gap-4 mb-8">
@@ -161,46 +222,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
             </div>
           ))}
         </div>
-      </section>
-      
-      {/* Database Fix Section */}
-      <section className={`rounded-[3rem] p-10 border-2 transition-all ${dbStatus?.connected ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-200 shadow-2xl shadow-rose-100'}`}>
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className={`p-4 rounded-3xl ${dbStatus?.connected ? 'bg-emerald-200 text-emerald-700' : 'bg-rose-500 text-white animate-pulse'}`}>
-              {dbStatus?.connected ? <CheckCircle2 size={24} /> : <AlertTriangle size={24} />}
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-slate-800">Status Server Cloud</h3>
-              <p className={`text-[10px] font-black uppercase tracking-widest ${dbStatus?.connected ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {dbStatus?.connected ? 'Terhubung Sempurna' : 'Perlu Sinkronisasi Ulang'}
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={() => { setIsRepairing(true); onRepair(); setTimeout(() => setIsRepairing(false), 1000); }}
-            className="flex items-center gap-2 px-8 py-4 bg-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-95"
-          >
-            <RefreshCw size={16} className={isRepairing ? 'animate-spin' : ''} />
-            Segarkan Database
-          </button>
-        </div>
-
-        {!dbStatus?.connected && (
-          <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
-             <div className="relative z-10">
-                <h4 className="text-sm font-black text-white mb-6 uppercase tracking-widest flex items-center gap-3">
-                  <Terminal size={20} className="text-indigo-400" /> Perbaikan Tabel Supabase
-                </h4>
-                <pre className="text-[10px] font-mono leading-relaxed bg-black/50 p-6 rounded-2xl overflow-x-auto text-emerald-400 border border-white/5">
-{`/* Jalankan di SQL Editor Supabase */
-ALTER TABLE transactions 
-ADD COLUMN IF NOT EXISTS student_name TEXT,
-ADD COLUMN IF NOT EXISTS attachment_url TEXT;`}
-                </pre>
-             </div>
-          </div>
-        )}
       </section>
     </div>
   );
