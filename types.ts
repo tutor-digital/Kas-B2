@@ -23,7 +23,7 @@ export interface Fund {
 export interface SplitRule {
   enabled: boolean;
   category: Category;
-  ratio: number; // e.g., 0.5 for 50/50
+  ratio: number;
   targetFundIds: string[];
 }
 
@@ -32,6 +32,8 @@ export interface SchoolClass {
   name: string;
   funds: Fund[];
   splitRule: SplitRule;
+  students: string[]; // Daftar nama siswa
+  isActive: boolean;  // Status aktif/inaktif
 }
 
 export interface Transaction {
@@ -41,9 +43,11 @@ export interface Transaction {
   description: string;
   amount: number;
   type: TransactionType;
-  fundId: string; // Menggunakan ID dana dinamis
+  fundId: string;
   category: Category;
   recordedBy: string;
+  studentName?: string; // Nama siswa jika iuran
+  attachmentUrl?: string; // Link foto nota
 }
 
 export interface SummaryStats {

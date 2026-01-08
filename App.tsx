@@ -24,6 +24,8 @@ const DEFAULT_FUNDS: Fund[] = [
 const DEFAULT_CLASS: SchoolClass = {
   id: 'b2',
   name: 'B2',
+  isActive: true,
+  students: [],
   funds: DEFAULT_FUNDS,
   splitRule: { enabled: true, category: Category.DUES, ratio: 0.5, targetFundIds: ['anak', 'perpisahan'] }
 };
@@ -84,7 +86,9 @@ const App: React.FC = () => {
           type: d.type as TransactionType,
           fundId: (d.fund_id || 'anak').toLowerCase(),
           category: d.category as Category, 
-          recordedBy: d.recorded_by || 'Bendahara'
+          recordedBy: d.recorded_by || 'Bendahara',
+          studentName: d.student_name,
+          attachmentUrl: d.attachment_url
         })));
         setDbStatus({ connected: true, error: null });
       }
@@ -106,12 +110,12 @@ const App: React.FC = () => {
       id: txId, class_id: selectedClassId, date: newTx.date, description: newTx.description,
       amount: newTx.amount, type: newTx.type, fund_id: isSplit ? 'gabungan' : newTx.fundId,
       fund_category: isSplit ? 'Gabungan' : newTx.fundId.charAt(0).toUpperCase() + newTx.fundId.slice(1),
-      category: newTx.category, recorded_by: 'Bendahara'
+      category: newTx.category, recorded_by: 'Bendahara', student_name: newTx.studentName, attachment_url: newTx.attachmentUrl
     };
 
     setTransactions(prev => [{ ...newTx, id: txId, classId: selectedClassId, fundId: isSplit ? 'gabungan' : newTx.fundId }, ...prev]);
     const { error } = await supabase.from('transactions').insert([payload]);
-    if (error) { alert("Gagal Simpan: " + error.message); fetchData(); }
+    if (error) { alert("Gagal Simpan ke Cloud: " + error.message); fetchData(); }
   };
 
   const stats = useMemo((): SummaryStats => {
@@ -149,7 +153,6 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-kids-pattern flex overflow-x-hidden">
       <div className="sun-bg"></div>
       
-      {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] md:hidden transition-all animate-in fade-in"
@@ -168,7 +171,7 @@ const App: React.FC = () => {
           } else {
             setActiveTab(id);
           }
-          setIsSidebarOpen(false); // Auto close mobile sidebar
+          setIsSidebarOpen(false);
         }} 
         classes={classes} 
         selectedClassId={selectedClassId} 
@@ -198,10 +201,13 @@ const App: React.FC = () => {
             >
               <Menu size={24} />
             </button>
-            <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-              Kelas {selectedClass.name}
-              <Cloud className="text-sky-300 hidden sm:block" size={24} />
-            </h2>
+            <div className="flex flex-col">
+               <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                Kelas {selectedClass.name}
+                <Cloud className="text-indigo-300 hidden sm:block" size={24} />
+              </h2>
+              {!selectedClass.isActive && <span className="text-[7px] font-black text-rose-500 uppercase tracking-widest">Kelas Sedang Nonaktif</span>}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
@@ -211,7 +217,7 @@ const App: React.FC = () => {
                 className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-amber-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-amber-200 hover:bg-amber-600 transition-all active:scale-95 text-[9px] md:text-[10px] font-black uppercase tracking-widest"
               >
                 <Lock size={14} className="md:size-[16px]" />
-                <span className="hidden sm:inline">Login Bendahara</span>
+                <span className="hidden sm:inline">Bendahara</span>
                 <span className="sm:hidden">Login</span>
               </button>
             ) : (
@@ -221,12 +227,12 @@ const App: React.FC = () => {
               </div>
             )}
             
-            <button onClick={fetchData} className={`p-2 md:p-3 text-slate-400 hover:text-sky-500 hover:bg-white rounded-xl md:rounded-2xl transition-all ${isSyncing ? 'animate-spin' : ''}`}>
+            <button onClick={fetchData} className={`p-2 md:p-3 text-slate-400 hover:text-indigo-500 hover:bg-white rounded-xl md:rounded-2xl transition-all ${isSyncing ? 'animate-spin' : ''}`}>
               <RefreshCw size={20} />
             </button>
             
             {isAdminAuthenticated && (
-              <button onClick={() => setIsFormOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-7 py-2 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-blue-200 text-[9px] md:text-[10px] uppercase tracking-widest transition-all active:scale-95">
+              <button onClick={() => setIsFormOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 md:px-7 py-2 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-indigo-200 text-[9px] md:text-[10px] uppercase tracking-widest transition-all active:scale-95">
                 <Plus size={18} /> <span className="hidden sm:inline">Catat Kas</span>
               </button>
             )}
@@ -238,7 +244,7 @@ const App: React.FC = () => {
             <>
               <StatsCards stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} />
               <TransactionTable transactions={transactions.slice(0, 10)} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onDelete={(id) => {
-                  if (confirm('Hapus permanen?')) {
+                  if (confirm('Hapus permanen data ini?')) {
                     setTransactions(prev => prev.filter(t => t.id !== id));
                     supabase.from('transactions').delete().eq('id', id).then(() => {});
                   }
@@ -255,7 +261,7 @@ const App: React.FC = () => {
           )}
           {activeTab === 'transactions' && (
             <TransactionTable transactions={transactions} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onDelete={(id) => {
-                if (confirm('Hapus?')) {
+                if (confirm('Hapus transaksi?')) {
                   setTransactions(prev => prev.filter(t => t.id !== id));
                   supabase.from('transactions').delete().eq('id', id).then(() => {});
                 }
@@ -280,26 +286,26 @@ const App: React.FC = () => {
       {/* Auth Modal */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] md:rounded-[3rem] w-full max-w-md p-6 md:p-10 text-center space-y-6 shadow-2xl border-4 border-sky-100 animate-in zoom-in-95 duration-300">
-            <div className="w-16 md:w-20 h-16 md:h-20 bg-sky-50 rounded-full flex items-center justify-center mx-auto text-sky-600">
+          <div className="bg-white rounded-[2rem] md:rounded-[3rem] w-full max-w-md p-6 md:p-10 text-center space-y-6 shadow-2xl border-4 border-indigo-100 animate-in zoom-in-95 duration-300">
+            <div className="w-16 md:w-20 h-16 md:h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto text-indigo-600">
               <Lock size={32} />
             </div>
             <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Login Bendahara</h3>
-            <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Masukkan password (Default: admin123)</p>
+            <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Gunakan password standar untuk mulai mencatat iuran.</p>
             <input 
               type="password" placeholder="••••••••" autoFocus 
-              className="w-full p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-50 border-2 border-transparent focus:border-sky-400 outline-none font-black text-center text-xl md:text-2xl tracking-[0.5em]" 
+              className="w-full p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-50 border-2 border-transparent focus:border-indigo-400 outline-none font-black text-center text-xl md:text-2xl tracking-[0.5em]" 
               onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(e.currentTarget.value); }} 
             />
             <div className="flex flex-col gap-3">
-              <button onClick={(e) => handleLogin((e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement).value)} className="w-full py-4 md:py-5 bg-slate-900 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-blue-600 transition-all shadow-xl">Masuk</button>
-              <button onClick={() => { setIsAuthModalOpen(false); setPendingTab(null); }} className="text-[10px] font-black text-slate-400 uppercase tracking-widest py-3">Kembali</button>
+              <button onClick={(e) => handleLogin((e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement).value)} className="w-full py-4 md:py-5 bg-slate-900 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-indigo-600 transition-all shadow-xl">Masuk</button>
+              <button onClick={() => { setIsAuthModalOpen(false); setPendingTab(null); }} className="text-[10px] font-black text-slate-400 uppercase tracking-widest py-3">Batal</button>
             </div>
           </div>
         </div>
       )}
 
-      {isFormOpen && <TransactionForm funds={selectedClass.funds} splitRule={selectedClass.splitRule} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
+      {isFormOpen && <TransactionForm funds={selectedClass.funds} students={selectedClass.students || []} splitRule={selectedClass.splitRule} onAdd={handleAddTransaction} onClose={() => setIsFormOpen(false)} />}
     </div>
   );
 };
