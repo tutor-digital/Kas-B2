@@ -1,0 +1,24 @@
+
+{
+  "short_name": "Kas B2",
+  "name": "Kas B2 - Manajemen Kas Kelas",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#e0f2fe",
+  "display": "standalone",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "description": "Sistem manajemen uang kas sekolah yang ceria dan informatif."
+}

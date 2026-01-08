@@ -7,13 +7,21 @@
   body {
     margin: 0;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    -moz-osx-smoothing: grayscale;
     background-color: #e0f2fe;
     background-image: 
       radial-gradient(at 0% 100%, #bae6fd 0px, transparent 50%),
       radial-gradient(at 100% 0%, #fef08a 0px, transparent 50%);
     overflow-x: hidden;
+    /* Mencegah seleksi teks yang tidak diinginkan di mobile app */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
   }
+}
+
+/* Mengizinkan seleksi teks hanya pada input dan tabel laporan */
+input, textarea, .prose, table {
+  user-select: text;
 }
 
 .bg-kids-pattern {
@@ -74,4 +82,9 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #7dd3fc;
+}
+
+/* Mencegah pull-to-refresh di beberapa browser mobile agar terasa seperti app asli */
+html, body {
+  overscroll-behavior-y: contain;
 }
