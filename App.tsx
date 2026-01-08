@@ -7,6 +7,7 @@ import TransactionForm from './components/TransactionForm';
 import FinancialAnalytics from './components/FinancialAnalytics';
 import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
+import CashReport from './components/CashReport';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
 import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, Eye, LogIn } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
@@ -214,6 +215,14 @@ const App: React.FC = () => {
                   }
               }} />
             </>
+          )}
+          {activeTab === 'report' && (
+            <CashReport 
+              stats={stats} 
+              selectedClass={selectedClass} 
+              initialBalances={initialBalances} 
+              transactions={transactions} 
+            />
           )}
           {activeTab === 'transactions' && (
             <TransactionTable transactions={transactions} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onDelete={(id) => {
