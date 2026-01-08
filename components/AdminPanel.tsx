@@ -104,7 +104,7 @@ ADD COLUMN IF NOT EXISTS attachment_url TEXT;`;
                   </button>
                 </div>
                 <p className="text-slate-400 text-[10px] mb-4 font-bold leading-relaxed">
-                  Langkah: Buka Supabase Dashboard > SQL Editor > Paste kode di bawah > Klik Run.
+                  Langkah: Buka Supabase Dashboard &gt; SQL Editor &gt; Paste kode di bawah &gt; Klik Run.
                 </p>
                 <pre className="text-[11px] font-mono leading-relaxed bg-black/50 p-6 rounded-2xl overflow-x-auto text-emerald-400 border border-white/5 shadow-inner">
 {sqlCode}
