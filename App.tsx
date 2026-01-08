@@ -9,7 +9,7 @@ import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import CashReport from './components/CashReport';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
-import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, Eye, LogIn } from 'lucide-react';
+import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, LogIn, Menu, X } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co';
@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null }>({ connected: true, error: null });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [classes, setClasses] = useState<SchoolClass[]>(() => {
     const saved = localStorage.getItem('kas_classes_v10');
@@ -47,7 +48,6 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : {};
   });
   
-  // ROLE STATE
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => localStorage.getItem('kas_admin_session') === 'active');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -148,63 +148,92 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-kids-pattern flex overflow-x-hidden">
       <div className="sun-bg"></div>
+      
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] md:hidden transition-all animate-in fade-in"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar 
+        isOpen={isSidebarOpen}
         activeTab={activeTab} 
         onTabChange={(id) => {
           const restricted = ['analytics', 'ai-assistant', 'admin'];
-          if (restricted.includes(id) && !isAdminAuthenticated) { setPendingTab(id); setIsAuthModalOpen(true); }
-          else setActiveTab(id);
+          if (restricted.includes(id) && !isAdminAuthenticated) { 
+            setPendingTab(id); 
+            setIsAuthModalOpen(true); 
+          } else {
+            setActiveTab(id);
+          }
+          setIsSidebarOpen(false); // Auto close mobile sidebar
         }} 
         classes={classes} 
         selectedClassId={selectedClassId} 
-        onClassChange={setSelectedClassId}
+        onClassChange={(id) => {
+          setSelectedClassId(id);
+          setIsSidebarOpen(false);
+        }}
         isAdmin={isAdminAuthenticated}
-        onLoginRequest={() => setIsAuthModalOpen(true)}
-        onLogout={() => { setIsAdminAuthenticated(false); localStorage.removeItem('kas_admin_session'); setActiveTab('dashboard'); }}
+        onLoginRequest={() => {
+          setIsAuthModalOpen(true);
+          setIsSidebarOpen(false);
+        }}
+        onLogout={() => { 
+          setIsAdminAuthenticated(false); 
+          localStorage.removeItem('kas_admin_session'); 
+          setActiveTab('dashboard'); 
+          setIsSidebarOpen(false);
+        }}
       />
       
-      <main className="flex-1 md:ml-64 min-w-0 relative z-10">
-        <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-2xl border-b border-white/40 px-8 py-6 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+      <main className="flex-1 md:ml-64 min-w-0 relative z-10 transition-all">
+        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-white/40 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
+            >
+              <Menu size={24} />
+            </button>
+            <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
               Kelas {selectedClass.name}
-              <Cloud className="text-sky-300 ml-1" size={24} />
+              <Cloud className="text-sky-300 hidden sm:block" size={24} />
             </h2>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2 md:gap-3">
             {!isAdminAuthenticated ? (
               <button 
                 onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-200 hover:bg-amber-600 transition-all active:scale-95 animate-pulse"
+                className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-amber-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-amber-200 hover:bg-amber-600 transition-all active:scale-95 text-[9px] md:text-[10px] font-black uppercase tracking-widest"
               >
-                <Lock size={16} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Login Bendahara</span>
+                <Lock size={14} className="md:size-[16px]" />
+                <span className="hidden sm:inline">Login Bendahara</span>
+                <span className="sm:hidden">Login</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2 px-5 py-2.5 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100">
+              <div className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100">
                 <ShieldAlert size={16} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Mode Bendahara</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Bendahara</span>
               </div>
             )}
             
-            <div className={`hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-2xl border ${dbStatus.connected ? 'bg-sky-50 text-sky-600 border-sky-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-               {dbStatus.connected ? <Wifi size={14} /> : <WifiOff size={14} />}
-               <span className="text-[10px] font-black uppercase tracking-widest">{dbStatus.connected ? 'Cloud Aktif' : 'Error'}</span>
-            </div>
-            
-            <button onClick={fetchData} className={`p-3 text-slate-400 hover:text-sky-500 hover:bg-white rounded-2xl transition-all ${isSyncing ? 'animate-spin' : ''}`}>
+            <button onClick={fetchData} className={`p-2 md:p-3 text-slate-400 hover:text-sky-500 hover:bg-white rounded-xl md:rounded-2xl transition-all ${isSyncing ? 'animate-spin' : ''}`}>
               <RefreshCw size={20} />
             </button>
             
             {isAdminAuthenticated && (
-              <button onClick={() => setIsFormOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-blue-200 text-[10px] uppercase tracking-widest transition-all active:scale-95">
-                <Plus size={18} /> Catat Kas
+              <button onClick={() => setIsFormOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-7 py-2 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-blue-200 text-[9px] md:text-[10px] uppercase tracking-widest transition-all active:scale-95">
+                <Plus size={18} /> <span className="hidden sm:inline">Catat Kas</span>
               </button>
             )}
           </div>
         </header>
 
-        <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-10">
+        <div className="p-4 md:p-10 max-w-7xl mx-auto space-y-6 md:space-y-10">
           {activeTab === 'dashboard' && (
             <>
               <StatsCards stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} />
@@ -251,20 +280,20 @@ const App: React.FC = () => {
       {/* Auth Modal */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] w-full max-w-md p-10 text-center space-y-6 shadow-2xl border-4 border-sky-100 animate-in zoom-in-95 duration-300">
-            <div className="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center mx-auto text-sky-600">
-              <Lock size={40} />
+          <div className="bg-white rounded-[2rem] md:rounded-[3rem] w-full max-w-md p-6 md:p-10 text-center space-y-6 shadow-2xl border-4 border-sky-100 animate-in zoom-in-95 duration-300">
+            <div className="w-16 md:w-20 h-16 md:h-20 bg-sky-50 rounded-full flex items-center justify-center mx-auto text-sky-600">
+              <Lock size={32} />
             </div>
-            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Login Bendahara</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Masukkan password untuk mulai mencatat (Default: admin123)</p>
+            <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Login Bendahara</h3>
+            <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Masukkan password (Default: admin123)</p>
             <input 
               type="password" placeholder="••••••••" autoFocus 
-              className="w-full p-6 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-sky-400 outline-none font-black text-center text-2xl tracking-[0.5em]" 
+              className="w-full p-4 md:p-6 rounded-2xl md:rounded-3xl bg-slate-50 border-2 border-transparent focus:border-sky-400 outline-none font-black text-center text-xl md:text-2xl tracking-[0.5em]" 
               onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(e.currentTarget.value); }} 
             />
             <div className="flex flex-col gap-3">
-              <button onClick={(e) => handleLogin((e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement).value)} className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all shadow-xl">Masuk</button>
-              <button onClick={() => { setIsAuthModalOpen(false); setPendingTab(null); }} className="text-xs font-black text-slate-400 uppercase tracking-widest py-3">Kembali</button>
+              <button onClick={(e) => handleLogin((e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement).value)} className="w-full py-4 md:py-5 bg-slate-900 text-white rounded-2xl md:rounded-3xl font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-blue-600 transition-all shadow-xl">Masuk</button>
+              <button onClick={() => { setIsAuthModalOpen(false); setPendingTab(null); }} className="text-[10px] font-black text-slate-400 uppercase tracking-widest py-3">Kembali</button>
             </div>
           </div>
         </div>
