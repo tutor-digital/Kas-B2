@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { SchoolClass, Fund, Category } from '../types';
-import { Plus, Trash2, Save, School, Coins, Split, RefreshCw, Database, Terminal, CheckCircle2, AlertTriangle, Users, Power, Copy, Check } from 'lucide-react';
+import { Plus, Trash2, Save, School, Coins, Split, RefreshCw, Database, Terminal, CheckCircle2, AlertTriangle, Users, Power, Copy, Check, RotateCcw } from 'lucide-react';
 
 interface AdminPanelProps {
   classes: SchoolClass[];
@@ -10,10 +10,11 @@ interface AdminPanelProps {
   initialBalances: Record<string, number>;
   onUpdateBalances: (balances: Record<string, number>) => void;
   onRepair: () => void;
-  dbStatus?: { connected: boolean; error: string | null; needsUpdate?: boolean };
+  dbStatus?: { connected: boolean; error: string | null; needsUpdate?: boolean; rowCount?: number };
+  projectId?: string;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdateClasses, initialBalances, onUpdateBalances, onRepair, dbStatus }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdateClasses, initialBalances, onUpdateBalances, onRepair, dbStatus, projectId }) => {
   const [newClassName, setNewClassName] = useState('');
   const [isRepairing, setIsRepairing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -62,10 +63,24 @@ ADD COLUMN IF NOT EXISTS attachment_url TEXT;`;
     handleUpdateCurrentClass({ ...selectedClass, students: list });
   };
 
+  const handleHardReset = () => {
+    if (confirm('Ini akan menghapus semua data LOKAL di HP ini dan memuat ulang dari Database Cloud. Lanjutkan?')) {
+      localStorage.clear();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-20">
       
-      {/* Database Status & Repair - Highlight if needs update */}
+      {/* Database Status & Repair */}
       <section className={`rounded-[3rem] p-10 border-4 transition-all ${dbStatus?.needsUpdate ? 'bg-rose-50 border-rose-500 shadow-2xl shadow-rose-200' : dbStatus?.connected ? 'bg-emerald-50 border-emerald-100 shadow-xl' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-4">
@@ -75,17 +90,38 @@ ADD COLUMN IF NOT EXISTS attachment_url TEXT;`;
             <div>
               <h3 className="text-xl font-black text-slate-800">Status Server Cloud</h3>
               <p className={`text-[10px] font-black uppercase tracking-widest ${dbStatus?.needsUpdate ? 'text-rose-600' : dbStatus?.connected ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {dbStatus?.needsUpdate ? '⚠️ STRUKTUR TABEL PERLU DIPERBAIKI' : dbStatus?.connected ? 'Terhubung Sempurna' : 'Perlu Sinkronisasi Ulang'}
+                {dbStatus?.needsUpdate ? '⚠️ STRUKTUR TABEL PERLU DIPERBAIKI' : dbStatus?.connected ? 'Terhubung ke Database' : 'Koneksi Terputus'}
               </p>
+              {projectId && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] bg-slate-100 px-2 py-1 rounded-md text-slate-500 font-mono">ID: {projectId}</span>
+                  </div>
+                  {dbStatus?.connected && (
+                    <div className="text-[10px] font-bold text-slate-600">
+                      Total Data: {dbStatus.rowCount !== undefined ? dbStatus.rowCount : '...'} Transaksi
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-          <button 
-            onClick={() => { setIsRepairing(true); onRepair(); setTimeout(() => setIsRepairing(false), 1000); }}
-            className="flex items-center gap-2 px-8 py-4 bg-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-95"
-          >
-            <RefreshCw size={16} className={isRepairing ? 'animate-spin' : ''} />
-            Cek Koneksi Ulang
-          </button>
+          <div className="flex flex-col gap-2 w-full md:w-auto">
+            <button 
+              onClick={() => { setIsRepairing(true); onRepair(); setTimeout(() => setIsRepairing(false), 1000); }}
+              className="flex items-center justify-center gap-2 px-8 py-4 bg-white rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-sm border border-slate-100 hover:bg-slate-50 transition-all active:scale-95"
+            >
+              <RefreshCw size={16} className={isRepairing ? 'animate-spin' : ''} />
+              Cek Koneksi
+            </button>
+            <button 
+              onClick={handleHardReset}
+              className="flex items-center justify-center gap-2 px-8 py-3 bg-rose-100 text-rose-600 rounded-3xl font-black uppercase tracking-widest text-[9px] shadow-sm hover:bg-rose-200 transition-all active:scale-95"
+            >
+              <RotateCcw size={14} />
+              Reset App di HP Ini
+            </button>
+          </div>
         </div>
 
         {(dbStatus?.needsUpdate || !dbStatus?.connected) && (

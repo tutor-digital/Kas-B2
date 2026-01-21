@@ -12,9 +12,23 @@ import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund
 import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, LogIn, Menu, X, AlertCircle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co';
+// --- KONFIGURASI DATABASE ---
+// PENTING: Ganti URL dan KEY di bawah ini dengan milik Project "Kas-B2" Anda.
+// Cara lihat: Dashboard Supabase > Klik Project Kas-B2 > Project Settings > API
+const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhta2d3ZXVxaG9wcG14cG92d2tiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2OTA3NTMsImV4cCI6MjA4MzI2Njc1M30.Ypqk5TYHqK54u4UESs8KIU4eb2mMRKoWeDWdVXRBTKk';
+// -----------------------------
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Helper untuk mengambil ID Project agar bisa dicek di Admin Panel
+const getProjectId = () => {
+  try {
+    return SUPABASE_URL.split('//')[1].split('.')[0];
+  } catch (e) {
+    return 'Tidak diketahui';
+  }
+};
 
 const DEFAULT_FUNDS: Fund[] = [
   { id: 'anak', name: 'Kas Anak', color: 'sky', isMain: true },
@@ -33,22 +47,40 @@ const DEFAULT_CLASS: SchoolClass = {
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null; needsUpdate: boolean }>({ 
+  const [dbStatus, setDbStatus] = useState<{ connected: boolean; error: string | null; needsUpdate: boolean; rowCount?: number }>({ 
     connected: true, 
     error: null,
-    needsUpdate: false
+    needsUpdate: false,
+    rowCount: 0
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [classes, setClasses] = useState<SchoolClass[]>(() => {
+    // LOGIKA PERPINDAHAN PROJECT:
+    // Cek apakah URL Project berubah dibanding sesi sebelumnya. Jika ya, hapus cache lama.
+    const lastUrl = localStorage.getItem('kas_last_project_url');
+    if (lastUrl && lastUrl !== SUPABASE_URL) {
+       console.log("Project Database berubah. Mereset cache lokal...");
+       localStorage.removeItem('kas_transactions_v10');
+       localStorage.removeItem('kas_balances_v10');
+       localStorage.removeItem('kas_classes_v10');
+       localStorage.removeItem('kas_admin_session');
+       localStorage.setItem('kas_last_project_url', SUPABASE_URL);
+       return [DEFAULT_CLASS];
+    }
+    localStorage.setItem('kas_last_project_url', SUPABASE_URL);
+
     const saved = localStorage.getItem('kas_classes_v10');
     return saved ? JSON.parse(saved) : [DEFAULT_CLASS];
   });
+  
   const [selectedClassId, setSelectedClassId] = useState('b2');
+  
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('kas_transactions_v10');
     return saved ? JSON.parse(saved) : [];
   });
+  
   const [initialBalances, setInitialBalances] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('kas_balances_v10');
     return saved ? JSON.parse(saved) : {};
@@ -95,14 +127,21 @@ const App: React.FC = () => {
           studentName: d.student_name,
           attachmentUrl: d.attachment_url
         })));
-        setDbStatus({ connected: true, error: null, needsUpdate: false });
+        setDbStatus({ connected: true, error: null, needsUpdate: false, rowCount: txData.length });
       }
 
-      if (txError && txError.message.includes('column')) {
-        setDbStatus(prev => ({ ...prev, needsUpdate: true }));
+      if (txError) {
+         if (txError.message.includes('column')) {
+            setDbStatus(prev => ({ ...prev, needsUpdate: true }));
+         } else if (txError.code === '42P01') {
+            // Table does not exist (New project)
+            setDbStatus({ connected: true, error: 'Tabel belum dibuat', needsUpdate: true, rowCount: 0 });
+         } else {
+            throw txError;
+         }
       }
     } catch (err: any) { 
-      setDbStatus({ connected: false, error: err.message, needsUpdate: err.message.includes('column') });
+      setDbStatus({ connected: false, error: err.message, needsUpdate: err.message.includes('column'), rowCount: 0 });
     } finally { 
       setIsSyncing(false);
     }
@@ -111,8 +150,8 @@ const App: React.FC = () => {
   useEffect(() => { fetchData(); }, [selectedClassId]);
 
   const handleDbError = (error: any) => {
-    if (error.message.includes('column') || error.message.includes('attachment_url')) {
-      alert("⚠️ Error Database: Struktur tabel di Cloud belum diupdate. Silakan buka menu 'Pengaturan Admin' untuk instruksi perbaikan.");
+    if (error.message.includes('column') || error.message.includes('attachment_url') || error.code === '42P01') {
+      alert("⚠️ Error Database: Struktur tabel di Cloud belum diupdate/dibuat. Silakan buka menu 'Pengaturan Admin' untuk instruksi perbaikan.");
       setDbStatus(prev => ({ ...prev, needsUpdate: true }));
     } else {
       alert("Gagal Simpan ke Cloud: " + error.message);
@@ -321,6 +360,7 @@ const App: React.FC = () => {
               selectedClass={selectedClass}
               onRepair={fetchData}
               dbStatus={dbStatus}
+              projectId={getProjectId()}
             />
           )}
         </div>
