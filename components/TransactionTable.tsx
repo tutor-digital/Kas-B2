@@ -25,8 +25,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
   const formatDate = (dateStr: string) => {
     try {
       return new Intl.DateTimeFormat('id-ID', {
-        day: 'numeric',
-        month: 'short'
+        weekday: 'short', // Menampilkan hari (Sen, Sel, dst)
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric' // Menampilkan tahun agar backdate terlihat jelas
       }).format(new Date(dateStr));
     } catch {
       return dateStr;
@@ -51,7 +53,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
           <table className="w-full text-left">
             <thead className="bg-slate-50/30">
               <tr>
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu</th>
+                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu Lengkap</th>
                 <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Detail & Kantong</th>
                 <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</th>
                 <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Aksi</th>
@@ -70,9 +72,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                   return (
                     <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-10 py-6 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-slate-400">
-                          <Calendar size={12} />
-                          <span className="text-xs font-black uppercase tracking-tighter">{formatDate(t.date)}</span>
+                        <div className="flex items-center gap-3 text-slate-500">
+                          <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl">
+                            <Calendar size={16} />
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-tight">{formatDate(t.date)}</span>
                         </div>
                       </td>
                       <td className="px-10 py-6">
@@ -92,7 +96,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                             </span>
                             {t.paymentDate && (
                                 <span className="text-[9px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded font-bold uppercase tracking-wide">
-                                    Iuran {new Date(t.paymentDate).toLocaleString('id-ID', { month: 'long' })}
+                                    Iuran {new Date(t.paymentDate).toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
                                 </span>
                             )}
                           </div>

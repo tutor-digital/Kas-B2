@@ -158,6 +158,11 @@ const App: React.FC = () => {
     fetchData();
   };
 
+  // Helper untuk sort by date descending
+  const sortTransactions = (txs: Transaction[]) => {
+    return [...txs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id' | 'classId'>) => {
     if (!isAdminAuthenticated) return;
     const txId = Math.random().toString(36).substr(2, 9);
@@ -179,7 +184,7 @@ const App: React.FC = () => {
       payment_date: newTx.paymentDate
     };
 
-    setTransactions(prev => [{ ...newTx, id: txId, classId: selectedClassId, fundId: isSplit ? 'gabungan' : newTx.fundId }, ...prev]);
+    setTransactions(prev => sortTransactions([{ ...newTx, id: txId, classId: selectedClassId, fundId: isSplit ? 'gabungan' : newTx.fundId }, ...prev]));
     const { error } = await supabase.from('transactions').insert([payload]);
     if (error) handleDbError(error);
   };
@@ -191,7 +196,7 @@ const App: React.FC = () => {
     const finalFundId = isSplit ? 'gabungan' : updatedTx.fundId;
     const finalTx = { ...updatedTx, fundId: finalFundId };
 
-    setTransactions(prev => prev.map(t => t.id === finalTx.id ? finalTx : t));
+    setTransactions(prev => sortTransactions(prev.map(t => t.id === finalTx.id ? finalTx : t)));
 
     const payload = {
       description: finalTx.description,
