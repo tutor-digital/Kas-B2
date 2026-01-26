@@ -20,9 +20,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
   const [copied, setCopied] = useState(false);
 
   const sqlCode = `/* Jalankan di SQL Editor Supabase */
+/* Ini WAJIB dijalankan agar Ceklis Iuran & Bukti Foto bisa disimpan */
+
 ALTER TABLE transactions 
-ADD COLUMN IF NOT EXISTS student_name TEXT,
-ADD COLUMN IF NOT EXISTS attachment_url TEXT,
+ADD COLUMN IF NOT EXISTS student_name TEXT;
+
+ALTER TABLE transactions 
+ADD COLUMN IF NOT EXISTS attachment_url TEXT;
+
+ALTER TABLE transactions 
 ADD COLUMN IF NOT EXISTS payment_date DATE;`;
 
   const handleCopy = () => {
@@ -125,6 +131,7 @@ ADD COLUMN IF NOT EXISTS payment_date DATE;`;
           </div>
         </div>
 
+        {/* Kotak Perbaikan Database - SELALU MUNCUL jika Error */}
         {(dbStatus?.needsUpdate || !dbStatus?.connected) && (
           <div className="bg-slate-900 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden animate-in zoom-in-95">
              <div className="relative z-10">

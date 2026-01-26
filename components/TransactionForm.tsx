@@ -14,6 +14,11 @@ interface TransactionFormProps {
 }
 
 const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, splitRule, initialData, onAdd, onUpdate, onClose }) => {
+  const currentYear = new Date().getFullYear();
+  // UPDATE: Memperluas range tahun (Current - 2 sampai Current + 2)
+  // Contoh jika 2025: [2023, 2024, 2025, 2026, 2027]
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
@@ -27,7 +32,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
   });
   
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
-  const [paymentYear, setPaymentYear] = useState(new Date().getFullYear());
+  const [paymentYear, setPaymentYear] = useState(currentYear);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,8 +103,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
             const paymentDateStr = `${paymentYear}-${String(monthIndex + 1).padStart(2, '0')}-01`;
             
             const finalDescription = (formData.category === Category.DUES && formData.studentName)
-                ? `${formData.description.split(' (')[0]} (${formData.studentName} - ${monthName})`
-                : `${formData.description} (${monthName})`;
+                ? `${formData.description.split(' (')[0]} (${formData.studentName} - ${monthName} ${paymentYear})`
+                : `${formData.description} (${monthName} ${paymentYear})`;
 
             const payload = {
                 ...formData,
@@ -219,16 +224,18 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
                 {formData.type === TransactionType.INCOME && (
                     <div className="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100">
                         <label className="block text-[10px] font-black text-indigo-400 mb-3 uppercase tracking-widest flex justify-between items-center">
-                            <span className="flex items-center gap-2"><CalendarClock size={12} /> Untuk Bulan Apa?</span>
+                            <span className="flex items-center gap-2"><CalendarClock size={12} /> Untuk Iuran Tahun?</span>
                             <select 
                                 value={paymentYear} 
                                 onChange={(e) => setPaymentYear(Number(e.target.value))}
-                                className="bg-transparent text-indigo-600 font-bold outline-none text-xs"
+                                className="bg-white/50 px-2 py-1 rounded-lg text-indigo-700 font-black outline-none text-xs border border-indigo-200"
                             >
-                                <option value={2024}>2024</option>
-                                <option value={2025}>2025</option>
+                                {yearOptions.map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
                             </select>
                         </label>
+                        <p className="text-[9px] text-indigo-400 mb-2 font-bold ml-1">Pilih Bulan (Bisa lebih dari satu):</p>
                         <div className="grid grid-cols-4 gap-2">
                             {months.map((m, idx) => (
                                 <button

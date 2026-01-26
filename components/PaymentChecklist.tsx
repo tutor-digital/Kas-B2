@@ -9,8 +9,12 @@ interface PaymentChecklistProps {
 }
 
 const PaymentChecklist: React.FC<PaymentChecklistProps> = ({ students, transactions }) => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // UPDATE: Memperluas range tahun (Current - 2 sampai Current + 2)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
@@ -107,7 +111,7 @@ const PaymentChecklist: React.FC<PaymentChecklistProps> = ({ students, transacti
             <Calendar size={24} />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-800">Ceklis Iuran</h3>
+            <h3 className="text-lg font-black text-slate-800">Ceklis Iuran Tahun {selectedYear}</h3>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pantau Kedisiplinan Pembayaran</p>
           </div>
         </div>
@@ -126,11 +130,11 @@ const PaymentChecklist: React.FC<PaymentChecklistProps> = ({ students, transacti
           <select 
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-4 py-3 bg-indigo-50 text-indigo-700 border-2 border-indigo-100 rounded-2xl text-sm font-black outline-none focus:border-indigo-400"
+            className="px-4 py-3 bg-indigo-50 text-indigo-700 border-2 border-indigo-100 rounded-2xl text-sm font-black outline-none focus:border-indigo-400 cursor-pointer"
           >
-            <option value={2024}>2024</option>
-            <option value={2025}>2025</option>
-            <option value={2026}>2026</option>
+            {yearOptions.map(y => (
+                <option key={y} value={y}>{y}</option>
+            ))}
           </select>
         </div>
       </div>
