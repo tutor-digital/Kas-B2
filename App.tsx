@@ -344,7 +344,14 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && (
             <>
               <StatsCards stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} />
-              <TransactionTable transactions={transactions.slice(0, 10)} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onEdit={(tx) => { setEditingTransaction(tx); setIsFormOpen(true); }} onDelete={(id) => {
+              {/* Dashboard hanya menampilkan 10 transaksi terbaru TANPA filter */}
+              <TransactionTable 
+                transactions={transactions.slice(0, 10)} 
+                funds={selectedClass.funds} 
+                isAdmin={isAdminAuthenticated} 
+                enableFilter={false}
+                onEdit={(tx) => { setEditingTransaction(tx); setIsFormOpen(true); }} 
+                onDelete={(id) => {
                   if (confirm('Hapus permanen data ini?')) {
                     setTransactions(prev => prev.filter(t => t.id !== id));
                     supabase.from('transactions').delete().eq('id', id).then(() => {});
@@ -359,12 +366,20 @@ const App: React.FC = () => {
             <CashReport stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} transactions={transactions} />
           )}
           {activeTab === 'transactions' && (
-            <TransactionTable transactions={transactions} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} onEdit={(tx) => { setEditingTransaction(tx); setIsFormOpen(true); }} onDelete={(id) => {
-                if (confirm('Hapus transaksi?')) {
-                  setTransactions(prev => prev.filter(t => t.id !== id));
-                  supabase.from('transactions').delete().eq('id', id).then(() => {});
-                }
-            }} />
+            /* Halaman Transaksi menampilkan semua data DENGAN filter */
+            <TransactionTable 
+                transactions={transactions} 
+                funds={selectedClass.funds} 
+                isAdmin={isAdminAuthenticated} 
+                enableFilter={true}
+                onEdit={(tx) => { setEditingTransaction(tx); setIsFormOpen(true); }} 
+                onDelete={(id) => {
+                    if (confirm('Hapus transaksi?')) {
+                    setTransactions(prev => prev.filter(t => t.id !== id));
+                    supabase.from('transactions').delete().eq('id', id).then(() => {});
+                    }
+                }} 
+            />
           )}
           {activeTab === 'analytics' && <FinancialAnalytics transactions={transactions} />}
           {activeTab === 'ai-assistant' && <AIAssistant transactions={transactions} />}

@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Transaction, TransactionType, Fund } from '../types';
-import { Trash2, Tag, Calendar, Sparkles, User, Layers, Image as ImageIcon, ExternalLink, X, Pencil, ZoomIn } from 'lucide-react';
+import { Trash2, Tag, Calendar, Sparkles, User, Layers, Image as ImageIcon, ExternalLink, X, Pencil, ZoomIn, Filter } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -9,10 +9,36 @@ interface TransactionTableProps {
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
   isAdmin: boolean;
+  enableFilter?: boolean; // Prop baru untuk mengaktifkan/menonaktifkan filter
 }
 
-const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, onEdit, isAdmin }) => {
+const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, onEdit, isAdmin, enableFilter = false }) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  
+  // State untuk Filter
+  const currentYear = new Date().getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState<number>(-1); // -1 artinya "Semua Bulan"
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
+  // Generate opsi tahun (2 tahun lalu s/d 2 tahun depan)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+
+  // Logika Filter
+  const filteredTransactions = useMemo(() => {
+    if (!enableFilter) return transactions;
+
+    return transactions.filter(t => {
+      const tDate = new Date(t.date);
+      const matchYear = tDate.getFullYear() === selectedYear;
+      const matchMonth = selectedMonth === -1 || tDate.getMonth() === selectedMonth;
+      return matchYear && matchMonth;
+    });
+  }, [transactions, selectedYear, selectedMonth, enableFilter]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -25,10 +51,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
   const formatDate = (dateStr: string) => {
     try {
       return new Intl.DateTimeFormat('id-ID', {
-        weekday: 'short', // Menampilkan hari (Sen, Sel, dst)
+        weekday: 'short',
         day: '2-digit',
         month: 'short',
-        year: 'numeric' // Menampilkan tahun agar backdate terlihat jelas
+        year: 'numeric'
       }).format(new Date(dateStr));
     } catch {
       return dateStr;
@@ -43,12 +69,55 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
   return (
     <>
       <div className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-xl border border-white/60 overflow-hidden animate-in fade-in duration-500">
-        <div className="p-10 border-b border-slate-50 flex items-center justify-between">
-          <h2 className="font-black text-slate-800 uppercase tracking-widest text-sm">Riwayat Kas Sekolah</h2>
-          {!isAdmin && (
-             <span className="text-[8px] font-black bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full uppercase tracking-widest">Mode Lihat</span>
+        <div className="p-8 md:p-10 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-black text-slate-800 uppercase tracking-widest text-sm flex items-center gap-2">
+                Riwayat Kas Sekolah
+                {enableFilter && filteredTransactions.length > 0 && (
+                    <span className="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-[9px]">{filteredTransactions.length} Data</span>
+                )}
+            </h2>
+            {!isAdmin && (
+                <span className="md:hidden text-[8px] font-black bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full uppercase tracking-widest">Mode Lihat</span>
+            )}
+          </div>
+
+          {/* Bagian Filter */}
+          {enableFilter ? (
+             <div className="flex flex-wrap gap-3 items-center">
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <Filter size={14} className="text-slate-400" />
+                    <select 
+                        value={selectedMonth} 
+                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                        className="bg-transparent text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
+                    >
+                        <option value={-1}>Semua Bulan</option>
+                        {months.map((m, idx) => (
+                            <option key={idx} value={idx}>{m}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <Calendar size={14} className="text-slate-400" />
+                    <select 
+                        value={selectedYear} 
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        className="bg-transparent text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
+                    >
+                        {yearOptions.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
+             </div>
+          ) : (
+            !isAdmin && (
+                <span className="hidden md:inline-block text-[8px] font-black bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full uppercase tracking-widest">Mode Lihat</span>
+             )
           )}
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50/30">
@@ -60,12 +129,19 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {transactions.length === 0 ? (
+              {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-10 py-20 text-center text-slate-300 text-xs font-black uppercase tracking-widest italic">Belum Ada Transaksi</td>
+                  <td colSpan={4} className="px-10 py-20 text-center text-slate-300">
+                    <div className="flex flex-col items-center gap-2">
+                        <Filter size={24} className="text-slate-200" />
+                        <span className="text-xs font-black uppercase tracking-widest italic">
+                            {enableFilter ? 'Tidak ada transaksi di periode ini' : 'Belum Ada Transaksi'}
+                        </span>
+                    </div>
+                  </td>
                 </tr>
               ) : (
-                transactions.map((t) => {
+                filteredTransactions.map((t) => {
                   const fund = getFundInfo(t.fundId);
                   const isSplit = t.fundId === 'gabungan';
                   
