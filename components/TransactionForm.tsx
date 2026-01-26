@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PlusCircle, X, Info, Coins, Sparkles, User, Camera, FileText, Check, Pencil } from 'lucide-react';
+import { PlusCircle, X, Info, Coins, Sparkles, User, Camera, FileText, Check, Pencil, CalendarClock } from 'lucide-react';
 import { Category, TransactionType, Transaction, Fund, SplitRule } from '../types';
 
 interface TransactionFormProps {
@@ -26,8 +26,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
     attachmentUrl: ''
   });
   
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  const [paymentYear, setPaymentYear] = useState(new Date().getFullYear());
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
   useEffect(() => {
     if (initialData) {
@@ -42,12 +46,27 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
         studentName: initialData.studentName || '',
         attachmentUrl: initialData.attachmentUrl || ''
       });
+      
+      // Jika edit, coba ambil bulan dari paymentDate
+      if (initialData.paymentDate) {
+         const d = new Date(initialData.paymentDate);
+         setSelectedMonths([d.getMonth()]);
+         setPaymentYear(d.getFullYear());
+      }
+    } else {
+        // Default select current month
+        const today = new Date();
+        setSelectedMonths([today.getMonth()]);
+        setPaymentYear(today.getFullYear());
     }
   }, [initialData]);
 
-  const isSplitActive = splitRule.enabled && 
-                       formData.type === TransactionType.INCOME && 
-                       formData.category === splitRule.category;
+  const toggleMonth = (idx: number) => {
+    if (initialData) return; // Disable multi-select on edit mode to simplify
+    setSelectedMonths(prev => 
+      prev.includes(idx) ? prev.filter(m => m !== idx) : [...prev, idx]
+    );
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,21 +85,56 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
     e.preventDefault();
     if (!formData.amount || !formData.description) return;
     
-    const finalDescription = (formData.category === Category.DUES && formData.studentName)
-      ? `${formData.description.split(' (')[0]} (${formData.studentName})`
-      : formData.description;
+    const isMultiMonth = !initialData && formData.category === Category.DUES && formData.type === TransactionType.INCOME && selectedMonths.length > 0;
 
-    const transactionPayload = {
-      ...formData,
-      description: finalDescription,
-      amount: Number(formData.amount),
-    };
+    if (isMultiMonth) {
+        // Logika Pecah Transaksi Berdasarkan Bulan
+        const totalAmount = Number(formData.amount); // Ini adalah TOTAL yang diinput user
+        const amountPerTx = Math.round(totalAmount / selectedMonths.length); // Dibagi rata
 
-    if (initialData && onUpdate) {
-      onUpdate({ ...transactionPayload, id: initialData.id, classId: initialData.classId });
+        selectedMonths.sort((a,b) => a - b).forEach(monthIndex => {
+            const monthName = months[monthIndex];
+            // Format Payment Date: YYYY-MM-01
+            const paymentDateStr = `${paymentYear}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+            
+            const finalDescription = (formData.category === Category.DUES && formData.studentName)
+                ? `${formData.description.split(' (')[0]} (${formData.studentName} - ${monthName})`
+                : `${formData.description} (${monthName})`;
+
+            const payload = {
+                ...formData,
+                description: finalDescription,
+                amount: amountPerTx,
+                paymentDate: paymentDateStr
+            };
+            onAdd(payload);
+        });
     } else {
-      onAdd(transactionPayload);
+        // Transaksi Tunggal (Standard)
+        const finalDescription = (formData.category === Category.DUES && formData.studentName)
+        ? `${formData.description.split(' (')[0]} (${formData.studentName})`
+        : formData.description;
+
+        // Jika edit atau single, paymentDate diambil dari bulan pertama yg terpilih
+        let paymentDateStr = undefined;
+        if (selectedMonths.length > 0) {
+            paymentDateStr = `${paymentYear}-${String(selectedMonths[0] + 1).padStart(2, '0')}-01`;
+        }
+
+        const transactionPayload = {
+            ...formData,
+            description: finalDescription,
+            amount: Number(formData.amount),
+            paymentDate: paymentDateStr
+        };
+
+        if (initialData && onUpdate) {
+            onUpdate({ ...transactionPayload, id: initialData.id, classId: initialData.classId });
+        } else {
+            onAdd(transactionPayload);
+        }
     }
+    
     onClose();
   };
 
@@ -100,6 +154,18 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
         </div>
         
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          {/* Tanggal Transaksi (Kapan uang diterima) */}
+          <div>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Tanggal Transaksi (Uang Diterima)</label>
+              <input
+                type="date"
+                required
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="w-full px-5 py-3 rounded-2xl border-2 border-slate-50 bg-slate-50 focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+              />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -134,19 +200,54 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
             </div>
 
             {formData.category === Category.DUES && (
-              <div className="animate-in slide-in-from-top-2 duration-300">
-                <label className="block text-[10px] font-black text-indigo-500 mb-2 uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <User size={12} /> Nama Siswa
-                </label>
-                <select
-                  required
-                  value={formData.studentName}
-                  onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
-                  className="w-full px-5 py-4 rounded-2xl border-2 border-indigo-100 bg-indigo-50/30 focus:bg-white focus:border-indigo-500 outline-none transition-all font-black text-slate-700 text-[11px] uppercase tracking-wider"
-                >
-                  <option value="">-- Pilih Nama Siswa --</option>
-                  {students.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+              <div className="animate-in slide-in-from-top-2 duration-300 space-y-4">
+                <div>
+                    <label className="block text-[10px] font-black text-indigo-500 mb-2 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <User size={12} /> Nama Siswa
+                    </label>
+                    <select
+                    required
+                    value={formData.studentName}
+                    onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-indigo-100 bg-indigo-50/30 focus:bg-white focus:border-indigo-500 outline-none transition-all font-black text-slate-700 text-[11px] uppercase tracking-wider"
+                    >
+                    <option value="">-- Pilih Nama Siswa --</option>
+                    {students.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
+
+                {formData.type === TransactionType.INCOME && (
+                    <div className="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100">
+                        <label className="block text-[10px] font-black text-indigo-400 mb-3 uppercase tracking-widest flex justify-between items-center">
+                            <span className="flex items-center gap-2"><CalendarClock size={12} /> Untuk Bulan Apa?</span>
+                            <select 
+                                value={paymentYear} 
+                                onChange={(e) => setPaymentYear(Number(e.target.value))}
+                                className="bg-transparent text-indigo-600 font-bold outline-none text-xs"
+                            >
+                                <option value={2024}>2024</option>
+                                <option value={2025}>2025</option>
+                            </select>
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                            {months.map((m, idx) => (
+                                <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => toggleMonth(idx)}
+                                    className={`py-2 rounded-xl text-[10px] font-black transition-all ${selectedMonths.includes(idx) ? 'bg-indigo-500 text-white shadow-md transform scale-105' : 'bg-white text-slate-400 hover:bg-indigo-100'}`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
+                        </div>
+                        {selectedMonths.length > 1 && !initialData && (
+                            <p className="text-[9px] text-indigo-400 mt-2 font-bold italic text-center">
+                                *Total {selectedMonths.length} bulan. Rp {Number(formData.amount || 0).toLocaleString('id-ID')} akan dibagi rata.
+                            </p>
+                        )}
+                    </div>
+                )}
               </div>
             )}
           </div>
@@ -163,7 +264,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Jumlah (Rp)</label>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Total Jumlah (Rp)</label>
               <input
                 required type="number" placeholder="0"
                 value={formData.amount}

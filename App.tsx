@@ -8,6 +8,7 @@ import FinancialAnalytics from './components/FinancialAnalytics';
 import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import CashReport from './components/CashReport';
+import PaymentChecklist from './components/PaymentChecklist';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
 import { Plus, RefreshCw, Cloud, Lock, WifiOff, Wifi, ShieldAlert, LogIn, Menu, X, AlertCircle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
@@ -56,8 +57,6 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [classes, setClasses] = useState<SchoolClass[]>(() => {
-    // LOGIKA PERPINDAHAN PROJECT:
-    // Cek apakah URL Project berubah dibanding sesi sebelumnya. Jika ya, hapus cache lama.
     const lastUrl = localStorage.getItem('kas_last_project_url');
     if (lastUrl && lastUrl !== SUPABASE_URL) {
        console.log("Project Database berubah. Mereset cache lokal...");
@@ -125,7 +124,8 @@ const App: React.FC = () => {
           category: d.category as Category, 
           recordedBy: d.recorded_by || 'Bendahara',
           studentName: d.student_name,
-          attachmentUrl: d.attachment_url
+          attachmentUrl: d.attachment_url,
+          paymentDate: d.payment_date
         })));
         setDbStatus({ connected: true, error: null, needsUpdate: false, rowCount: txData.length });
       }
@@ -134,7 +134,6 @@ const App: React.FC = () => {
          if (txError.message.includes('column')) {
             setDbStatus(prev => ({ ...prev, needsUpdate: true }));
          } else if (txError.code === '42P01') {
-            // Table does not exist (New project)
             setDbStatus({ connected: true, error: 'Tabel belum dibuat', needsUpdate: true, rowCount: 0 });
          } else {
             throw txError;
@@ -150,7 +149,7 @@ const App: React.FC = () => {
   useEffect(() => { fetchData(); }, [selectedClassId]);
 
   const handleDbError = (error: any) => {
-    if (error.message.includes('column') || error.message.includes('attachment_url') || error.code === '42P01') {
+    if (error.message.includes('column') || error.message.includes('attachment_url') || error.message.includes('payment_date') || error.code === '42P01') {
       alert("⚠️ Error Database: Struktur tabel di Cloud belum diupdate/dibuat. Silakan buka menu 'Pengaturan Admin' untuk instruksi perbaikan.");
       setDbStatus(prev => ({ ...prev, needsUpdate: true }));
     } else {
@@ -165,10 +164,19 @@ const App: React.FC = () => {
     const isSplit = selectedClass.splitRule.enabled && newTx.category === selectedClass.splitRule.category && newTx.type === TransactionType.INCOME;
     
     const payload = {
-      id: txId, class_id: selectedClassId, date: newTx.date, description: newTx.description,
-      amount: newTx.amount, type: newTx.type, fund_id: isSplit ? 'gabungan' : newTx.fundId,
+      id: txId, 
+      class_id: selectedClassId, 
+      date: newTx.date, 
+      description: newTx.description,
+      amount: newTx.amount, 
+      type: newTx.type, 
+      fund_id: isSplit ? 'gabungan' : newTx.fundId,
       fund_category: isSplit ? 'Gabungan' : newTx.fundId.charAt(0).toUpperCase() + newTx.fundId.slice(1),
-      category: newTx.category, recorded_by: 'Bendahara', student_name: newTx.studentName, attachment_url: newTx.attachmentUrl
+      category: newTx.category, 
+      recorded_by: 'Bendahara', 
+      student_name: newTx.studentName, 
+      attachment_url: newTx.attachmentUrl,
+      payment_date: newTx.paymentDate
     };
 
     setTransactions(prev => [{ ...newTx, id: txId, classId: selectedClassId, fundId: isSplit ? 'gabungan' : newTx.fundId }, ...prev]);
@@ -193,7 +201,8 @@ const App: React.FC = () => {
       category: finalTx.category,
       student_name: finalTx.studentName,
       attachment_url: finalTx.attachmentUrl,
-      date: finalTx.date
+      date: finalTx.date,
+      payment_date: finalTx.paymentDate
     };
 
     const { error } = await supabase.from('transactions').update(payload).eq('id', finalTx.id);
@@ -337,6 +346,9 @@ const App: React.FC = () => {
                   }
               }} />
             </>
+          )}
+          {activeTab === 'checklist' && (
+            <PaymentChecklist students={selectedClass.students || []} transactions={transactions} />
           )}
           {activeTab === 'report' && (
             <CashReport stats={stats} selectedClass={selectedClass} initialBalances={initialBalances} transactions={transactions} />

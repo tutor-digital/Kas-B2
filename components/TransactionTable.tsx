@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Transaction, TransactionType, Fund } from '../types';
-import { Trash2, Tag, Calendar, Sparkles, User, Layers, Image as ImageIcon, ExternalLink, X, Pencil } from 'lucide-react';
+import { Trash2, Tag, Calendar, Sparkles, User, Layers, Image as ImageIcon, ExternalLink, X, Pencil, ZoomIn } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -90,6 +90,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                             <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest flex items-center gap-1">
                               <User size={10} /> {t.recordedBy}
                             </span>
+                            {t.paymentDate && (
+                                <span className="text-[9px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded font-bold uppercase tracking-wide">
+                                    Iuran {new Date(t.paymentDate).toLocaleString('id-ID', { month: 'long' })}
+                                </span>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -103,10 +108,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                           {t.attachmentUrl && (
                             <button 
                               onClick={() => setPreviewImage(t.attachmentUrl!)}
-                              className="text-indigo-400 hover:text-indigo-600 p-2.5 hover:bg-indigo-50 rounded-xl transition-all"
+                              className="text-indigo-400 hover:text-indigo-600 p-2.5 hover:bg-indigo-50 rounded-xl transition-all group relative"
                               title="Lihat Bukti Foto"
                             >
                               <ImageIcon size={16} />
+                              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                              </span>
                             </button>
                           )}
                           {isAdmin && (
@@ -138,23 +147,34 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
         </div>
       </div>
 
-      {/* Modal Preview Gambar */}
+      {/* Modal Preview Gambar (Fixed Full Screen Z-Index High) */}
       {previewImage && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] p-6 max-w-2xl w-full relative animate-in zoom-in-95 duration-300">
-            <button 
-              onClick={() => setPreviewImage(null)}
-              className="absolute -top-4 -right-4 bg-rose-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-all"
-            >
-              <X size={24} />
-            </button>
-            <div className="p-4 bg-slate-50 rounded-[2rem] overflow-hidden border-4 border-white shadow-inner">
-               <img src={previewImage} alt="Bukti Nota" className="w-full h-auto rounded-2xl max-h-[70vh] object-contain" />
+        <div className="fixed inset-0 bg-black z-[10000] flex flex-col items-center justify-center p-4 animate-in fade-in duration-300 pointer-events-auto">
+            {/* Header Toolbar */}
+            <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-[10001]">
+               <span className="text-white/80 font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                 <ImageIcon size={16} /> Pratinjau Bukti
+               </span>
+               <button 
+                onClick={() => setPreviewImage(null)}
+                className="bg-white/20 hover:bg-white/40 text-white p-4 rounded-full transition-all backdrop-blur-md group active:scale-95"
+              >
+                <X size={28} className="group-hover:rotate-90 transition-transform duration-300" />
+              </button>
             </div>
-            <div className="mt-6 text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lampiran Bukti Transaksi</p>
+
+            {/* Container Gambar */}
+            <div className="w-full h-full flex items-center justify-center p-4 md:p-10 relative">
+               <img 
+                 src={previewImage} 
+                 alt="Bukti Nota" 
+                 className="max-w-full max-h-full object-contain rounded-lg shadow-2xl ring-1 ring-white/10"
+               />
             </div>
-          </div>
+            
+            <p className="absolute bottom-8 text-white/50 text-[10px] font-black uppercase tracking-widest">
+               Ketuk tombol silang di pojok kanan atas untuk menutup
+            </p>
         </div>
       )}
     </>

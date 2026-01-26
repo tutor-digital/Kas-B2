@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { LayoutDashboard, List, BarChart3, Bot, Settings, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, List, BarChart3, Bot, Settings, ClipboardList, CheckSquare } from 'lucide-react';
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+  { id: 'checklist', label: 'Ceklis Iuran', icon: <CheckSquare size={20} /> }, // Menu Baru
   { id: 'report', label: 'Laporan Kas', icon: <ClipboardList size={20} /> },
   { id: 'transactions', label: 'Transaksi', icon: <List size={20} /> },
   { id: 'analytics', label: 'Analisis', icon: <BarChart3 size={20} /> },

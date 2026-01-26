@@ -22,7 +22,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ classes, selectedClass, onUpdat
   const sqlCode = `/* Jalankan di SQL Editor Supabase */
 ALTER TABLE transactions 
 ADD COLUMN IF NOT EXISTS student_name TEXT,
-ADD COLUMN IF NOT EXISTS attachment_url TEXT;`;
+ADD COLUMN IF NOT EXISTS attachment_url TEXT,
+ADD COLUMN IF NOT EXISTS payment_date DATE;`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sqlCode);

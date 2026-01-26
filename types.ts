@@ -48,6 +48,7 @@ export interface Transaction {
   recordedBy: string;
   studentName?: string; // Nama siswa jika iuran
   attachmentUrl?: string; // Link foto nota
+  paymentDate?: string; // Tanggal spesifik bulan pembayaran (misal: '2024-01-01' untuk iuran Januari)
 }
 
 export interface SummaryStats {
