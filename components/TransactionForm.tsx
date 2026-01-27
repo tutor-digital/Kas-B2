@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PlusCircle, X, Info, Coins, Sparkles, User, Camera, FileText, Check, Pencil, CalendarClock } from 'lucide-react';
+import { PlusCircle, X, Info, Coins, Sparkles, User, Camera, FileText, Check, Pencil, CalendarClock, Wallet } from 'lucide-react';
 import { Category, TransactionType, Transaction, Fund, SplitRule } from '../types';
 
 interface TransactionFormProps {
@@ -16,7 +16,6 @@ interface TransactionFormProps {
 const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, splitRule, initialData, onAdd, onUpdate, onClose }) => {
   const currentYear = new Date().getFullYear();
   // UPDATE: Memperluas range tahun (Current - 2 sampai Current + 2)
-  // Contoh jika 2025: [2023, 2024, 2025, 2026, 2027]
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
   const [formData, setFormData] = useState({
@@ -193,6 +192,24 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
           </div>
 
           <div className="space-y-4">
+            {/* Pilihan Sumber Dana (Hanya muncul saat Uang Keluar) */}
+            {formData.type === TransactionType.EXPENSE && (
+               <div className="animate-in slide-in-from-top-2 duration-300">
+                  <label className="block text-[10px] font-black text-rose-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-2">
+                     <Wallet size={12} /> Ambil dari Kas Mana?
+                  </label>
+                  <select
+                    value={formData.fundId}
+                    onChange={(e) => setFormData({ ...formData, fundId: e.target.value })}
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-rose-100 bg-rose-50/30 focus:bg-white focus:border-rose-500 outline-none transition-all font-black text-slate-700 text-[11px] uppercase tracking-wider cursor-pointer"
+                  >
+                    {funds.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+               </div>
+            )}
+
             <div>
               <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest ml-1">Kategori Transaksi</label>
               <select
@@ -204,7 +221,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
               </select>
             </div>
 
-            {formData.category === Category.DUES && (
+            {formData.category === Category.DUES && formData.type === TransactionType.INCOME && (
               <div className="animate-in slide-in-from-top-2 duration-300 space-y-4">
                 <div>
                     <label className="block text-[10px] font-black text-indigo-500 mb-2 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -221,40 +238,38 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
                     </select>
                 </div>
 
-                {formData.type === TransactionType.INCOME && (
-                    <div className="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100">
-                        <label className="block text-[10px] font-black text-indigo-400 mb-3 uppercase tracking-widest flex justify-between items-center">
-                            <span className="flex items-center gap-2"><CalendarClock size={12} /> Untuk Iuran Tahun?</span>
-                            <select 
-                                value={paymentYear} 
-                                onChange={(e) => setPaymentYear(Number(e.target.value))}
-                                className="bg-white/50 px-2 py-1 rounded-lg text-indigo-700 font-black outline-none text-xs border border-indigo-200"
-                            >
-                                {yearOptions.map(y => (
-                                    <option key={y} value={y}>{y}</option>
-                                ))}
-                            </select>
-                        </label>
-                        <p className="text-[9px] text-indigo-400 mb-2 font-bold ml-1">Pilih Bulan (Bisa lebih dari satu):</p>
-                        <div className="grid grid-cols-4 gap-2">
-                            {months.map((m, idx) => (
-                                <button
-                                    key={m}
-                                    type="button"
-                                    onClick={() => toggleMonth(idx)}
-                                    className={`py-2 rounded-xl text-[10px] font-black transition-all ${selectedMonths.includes(idx) ? 'bg-indigo-500 text-white shadow-md transform scale-105' : 'bg-white text-slate-400 hover:bg-indigo-100'}`}
-                                >
-                                    {m}
-                                </button>
+                <div className="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100">
+                    <label className="block text-[10px] font-black text-indigo-400 mb-3 uppercase tracking-widest flex justify-between items-center">
+                        <span className="flex items-center gap-2"><CalendarClock size={12} /> Untuk Iuran Tahun?</span>
+                        <select 
+                            value={paymentYear} 
+                            onChange={(e) => setPaymentYear(Number(e.target.value))}
+                            className="bg-white/50 px-2 py-1 rounded-lg text-indigo-700 font-black outline-none text-xs border border-indigo-200"
+                        >
+                            {yearOptions.map(y => (
+                                <option key={y} value={y}>{y}</option>
                             ))}
-                        </div>
-                        {selectedMonths.length > 1 && !initialData && (
-                            <p className="text-[9px] text-indigo-400 mt-2 font-bold italic text-center">
-                                *Total {selectedMonths.length} bulan. Rp {Number(formData.amount || 0).toLocaleString('id-ID')} akan dibagi rata.
-                            </p>
-                        )}
+                        </select>
+                    </label>
+                    <p className="text-[9px] text-indigo-400 mb-2 font-bold ml-1">Pilih Bulan (Bisa lebih dari satu):</p>
+                    <div className="grid grid-cols-4 gap-2">
+                        {months.map((m, idx) => (
+                            <button
+                                key={m}
+                                type="button"
+                                onClick={() => toggleMonth(idx)}
+                                className={`py-2 rounded-xl text-[10px] font-black transition-all ${selectedMonths.includes(idx) ? 'bg-indigo-500 text-white shadow-md transform scale-105' : 'bg-white text-slate-400 hover:bg-indigo-100'}`}
+                            >
+                                {m}
+                            </button>
+                        ))}
                     </div>
-                )}
+                    {selectedMonths.length > 1 && !initialData && (
+                        <p className="text-[9px] text-indigo-400 mt-2 font-bold italic text-center">
+                            *Total {selectedMonths.length} bulan. Rp {Number(formData.amount || 0).toLocaleString('id-ID')} akan dibagi rata.
+                        </p>
+                    )}
+                </div>
               </div>
             )}
           </div>

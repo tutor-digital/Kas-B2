@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { SummaryStats, SchoolClass, Transaction, TransactionType } from '../types';
 import { FileText, ArrowUpCircle, ArrowDownCircle, Wallet, Calculator, CalendarRange, History } from 'lucide-react';
@@ -52,7 +51,7 @@ const CashReport: React.FC<CashReportProps> = ({ stats, selectedClass, initialBa
     };
   });
 
-  const totals = fundSummaries.reduce((acc, curr) => ({
+  const totals = fundSummaries.reduce((acc: { initial: number; debet: number; kredit: number; final: number }, curr) => ({
     initial: acc.initial + curr.initial,
     debet: acc.debet + curr.debet,
     kredit: acc.kredit + curr.kredit,
@@ -63,13 +62,13 @@ const CashReport: React.FC<CashReportProps> = ({ stats, selectedClass, initialBa
   // --- LOGIKA 2: Laporan Mutasi Bulanan (Monthly Ledger) ---
   const monthlyMutations = useMemo(() => {
     // 1. Hitung Total Saldo Awal Global (Semua Kantong)
-    const totalInitialBalance = Object.values(initialBalances).reduce((acc, val) => acc + val, 0);
+    const totalInitialBalance = Object.values(initialBalances).reduce((acc: number, val: number) => acc + val, 0);
 
     // 2. Urutkan transaksi dari TERLAMA ke TERBARU untuk menghitung saldo berjalan
     const sortedTx = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const groups = new Map<string, { label: string, dateObj: Date, initial: number, income: number, expense: number, final: number }>();
-    let currentBalance = totalInitialBalance;
+    let currentBalance: number = totalInitialBalance;
 
     // 3. Iterasi transaksi
     for (const t of sortedTx) {
