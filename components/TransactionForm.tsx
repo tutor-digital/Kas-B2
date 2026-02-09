@@ -8,19 +8,20 @@ interface TransactionFormProps {
   students: string[];
   splitRule: SplitRule;
   initialData?: Transaction | null;
+  defaultType?: TransactionType;
   onAdd: (transaction: Omit<Transaction, 'id' | 'classId'>) => void;
   onUpdate?: (transaction: Transaction) => void;
   onClose: () => void;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, splitRule, initialData, onAdd, onUpdate, onClose }) => {
+const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, splitRule, initialData, defaultType = TransactionType.INCOME, onAdd, onUpdate, onClose }) => {
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
-    type: TransactionType.INCOME,
+    type: initialData?.type || defaultType,
     fundId: funds[0]?.id || 'anak',
     category: Category.DUES,
     date: new Date().toISOString().split('T')[0],
@@ -37,15 +38,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
   useEffect(() => {
-    if (initialData) {
+    if (initialData && initialData.amount !== undefined) {
       setFormData({
-        description: initialData.description,
-        amount: initialData.amount.toString(),
+        description: initialData.description || '',
+        amount: initialData.amount !== undefined ? initialData.amount.toString() : '',
         type: initialData.type,
-        fundId: initialData.fundId,
-        category: initialData.category,
-        date: initialData.date,
-        recordedBy: initialData.recordedBy,
+        fundId: initialData.fundId || funds[0]?.id || 'anak',
+        category: initialData.category || Category.DUES,
+        date: initialData.date || new Date().toISOString().split('T')[0],
+        recordedBy: initialData.recordedBy || 'Bendahara',
         studentName: initialData.studentName || '',
         attachmentUrl: initialData.attachmentUrl || ''
       });
@@ -56,11 +57,17 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
          setPaymentYear(d.getFullYear());
       }
     } else {
+        // Reset defaults if needed, specifically ensuring correct type
         const today = new Date();
         setSelectedMonths([today.getMonth()]);
         setPaymentYear(today.getFullYear());
+        
+        // Ensure type respects defaultType if initialData is not present
+        if (!initialData) {
+            setFormData(prev => ({ ...prev, type: defaultType }));
+        }
     }
-  }, [initialData]);
+  }, [initialData, defaultType, funds]);
 
   const toggleMonth = (idx: number) => {
     if (initialData) return;

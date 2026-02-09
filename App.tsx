@@ -277,7 +277,8 @@ const App: React.FC = () => {
       {isFormOpen && (
         <TransactionForm 
           funds={selectedClass.funds} students={selectedClass.students} splitRule={selectedClass.splitRule} 
-          initialData={formType === TransactionType.INCOME ? undefined : { type: TransactionType.EXPENSE } as any}
+          defaultType={formType}
+          initialData={undefined}
           onAdd={(tx) => { supabase.from('transactions').insert([{ ...tx, class_id: selectedClassId }]).then(() => { fetchData(); setIsFormOpen(false); }); }} 
           onClose={() => setIsFormOpen(false)} 
         />
