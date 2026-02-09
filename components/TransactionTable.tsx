@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Transaction, TransactionType, Fund } from '../types';
-import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Trash2, Edit2 } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -25,17 +25,16 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onDel
     <div className="w-full pb-24">
       <div className="flex items-center justify-between mb-4 px-1">
         <h3 className="text-lg font-bold text-white">Riwayat Transaksi</h3>
-        <button className="text-xs text-emerald-500 font-medium">Lihat Semua</button>
       </div>
 
       <div className="space-y-3">
         {transactions.length === 0 ? (
-          <div className="py-12 text-center">
-             <p className="text-xs text-slate-500">Belum ada transaksi tercatat.</p>
+          <div className="py-12 text-center bg-[#1e1b2e] rounded-3xl border border-white/5">
+             <p className="text-xs text-slate-500 font-medium">Belum ada transaksi tercatat.</p>
           </div>
         ) : (
           transactions.map((t) => (
-            <div key={t.id} className="bg-[#151a23] p-4 rounded-2xl flex items-center justify-between border border-white/5">
+            <div key={t.id} className="bg-[#1e1b2e] p-4 rounded-2xl flex items-center justify-between border border-white/5 hover:bg-[#252139] transition-colors group">
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${t.type === TransactionType.INCOME ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                   {t.type === TransactionType.INCOME ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
@@ -49,11 +48,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onDel
               </div>
               
               <div className="text-right shrink-0">
-                <p className={`text-sm font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-500' : 'text-white'}`}>
+                <p className={`text-sm font-bold ${t.type === TransactionType.INCOME ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {t.type === TransactionType.INCOME ? '+' : '-'} {formatCurrency(t.amount)}
                 </p>
                 {isAdmin && (
-                  <button onClick={() => onDelete(t.id)} className="text-[9px] text-rose-500/50 hover:text-rose-500 mt-1 block w-full text-right">
+                  <button onClick={() => onDelete(t.id)} className="text-[9px] text-rose-500/40 hover:text-rose-500 mt-1 block w-full text-right transition-colors">
                     Hapus
                   </button>
                 )}

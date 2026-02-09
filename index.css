@@ -5,9 +5,9 @@
 
 @layer base {
   :root {
-    --bg-primary: #0b0e14; /* Deep Navy Black */
-    --card-bg: #151a23;     /* Slightly lighter for cards */
-    --accent-green: #10b981;
+    --bg-primary: #110e1b; /* Deep Dark Violet */
+    --card-bg: #1e1b2e;     
+    --accent-purple: #8b5cf6;
   }
 
   html, body {
@@ -26,14 +26,14 @@
   }
 }
 
-/* AlimBank Style Green Card */
-.alim-card {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4);
+/* StockBit Style Purple Card */
+.stockbit-card {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.4);
 }
 
 .nav-item-active {
-  color: #10b981;
+  color: #8b5cf6;
 }
 
 .nav-item-inactive {
@@ -42,11 +42,17 @@
 
 /* Glass effect for bottom nav */
 .bottom-nav {
-  background: rgba(21, 26, 35, 0.95);
+  background: rgba(17, 14, 27, 0.95);
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .light-mode-content {
   color: #1e293b;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }

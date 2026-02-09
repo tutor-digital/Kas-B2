@@ -12,7 +12,7 @@ import AdminPanel from './components/AdminPanel';
 import CashReport from './components/CashReport';
 import PaymentChecklist from './components/PaymentChecklist';
 import { Transaction, TransactionType, SummaryStats, SchoolClass, Category, Fund } from './types';
-import { Lock } from 'lucide-react';
+import { Lock, FileText, BarChart3, Settings, ReceiptText, ChevronRight } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://hmkgweuqhoppmxpovwkb.supabase.co'; 
@@ -121,13 +121,77 @@ const App: React.FC = () => {
                 onNavigate={setActiveTab}
              />
 
-             {/* Recent Transactions */}
-             <TransactionTable 
-                transactions={transactions.slice(0, 5)} 
-                funds={selectedClass.funds} 
-                isAdmin={isAdminAuthenticated} 
-                onEdit={() => {}} onDelete={() => {}}
-             />
+             {/* Menu Buttons Grid */}
+             <div className="mt-8">
+               <h3 className="text-white font-bold text-lg mb-4 px-2">Menu Utama</h3>
+               <div className="grid grid-cols-1 gap-4">
+                 
+                 <button onClick={() => setActiveTab('transactions')} className="glass-panel p-4 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                          <ReceiptText size={24} />
+                       </div>
+                       <div className="text-left">
+                          <h4 className="text-white font-bold">Riwayat Transaksi</h4>
+                          <p className="text-slate-400 text-xs">Lihat semua uang masuk & keluar</p>
+                       </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-all">
+                       <ChevronRight size={20} />
+                    </div>
+                 </button>
+
+                 <button onClick={() => setActiveTab('report')} className="glass-panel p-4 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 rounded-2xl bg-violet-500/20 text-violet-400 flex items-center justify-center border border-violet-500/20">
+                          <FileText size={24} />
+                       </div>
+                       <div className="text-left">
+                          <h4 className="text-white font-bold">Laporan Kas</h4>
+                          <p className="text-slate-400 text-xs">Ringkasan bulanan & per kantong</p>
+                       </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-all">
+                       <ChevronRight size={20} />
+                    </div>
+                 </button>
+
+                 <button onClick={() => setActiveTab('analytics')} className="glass-panel p-4 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                          <BarChart3 size={24} />
+                       </div>
+                       <div className="text-left">
+                          <h4 className="text-white font-bold">Analisis Grafik</h4>
+                          <p className="text-slate-400 text-xs">Visualisasi data keuangan kelas</p>
+                       </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-all">
+                       <ChevronRight size={20} />
+                    </div>
+                 </button>
+
+                 <button onClick={() => setActiveTab('admin')} className="glass-panel p-4 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 rounded-2xl bg-slate-500/20 text-slate-400 flex items-center justify-center border border-slate-500/20">
+                          <Settings size={24} />
+                       </div>
+                       <div className="text-left">
+                          <h4 className="text-white font-bold">Pengaturan Admin</h4>
+                          <p className="text-slate-400 text-xs">Kelola siswa & reset data</p>
+                       </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-all">
+                       <ChevronRight size={20} />
+                    </div>
+                 </button>
+
+               </div>
+             </div>
+
+             <div className="mt-8">
+               <AIAssistant transactions={transactions} />
+             </div>
           </div>
         );
       case 'transactions':
@@ -152,7 +216,7 @@ const App: React.FC = () => {
                     <div className="text-center py-20">
                         <Lock className="mx-auto text-slate-400 mb-4" size={48} />
                         <h3 className="text-slate-600 font-bold">Area Terbatas</h3>
-                        <button onClick={() => setIsAuthModalOpen(true)} className="mt-4 px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold">Masuk Admin</button>
+                        <button onClick={() => setIsAuthModalOpen(true)} className="mt-4 px-6 py-2 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-700 transition-colors">Masuk Admin</button>
                     </div>
                 ) : (
                     <AdminPanel classes={classes} selectedClass={selectedClass} onUpdateClasses={setClasses} initialBalances={initialBalances} onUpdateBalances={setInitialBalances} onRepair={fetchData} dbStatus={{connected: true, error: null}} />
@@ -165,7 +229,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-white font-sans overflow-x-hidden pb-24 md:pb-0">
+    <div className="min-h-screen bg-[#110e1b] text-white font-sans overflow-x-hidden pb-24 md:pb-0">
       
       {/* Desktop Sidebar (Hidden on Mobile) */}
       <div className="hidden md:block">
@@ -190,8 +254,8 @@ const App: React.FC = () => {
       {/* Admin Auth Modal */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-          <div className="bg-[#151a23] border border-white/10 w-full max-w-xs p-8 text-center space-y-6 rounded-[2rem] shadow-2xl">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 mx-auto border border-emerald-500/10">
+          <div className="bg-[#1e1b2e] border border-white/10 w-full max-w-xs p-8 text-center space-y-6 rounded-[2rem] shadow-2xl">
+            <div className="w-16 h-16 bg-violet-500/10 rounded-2xl flex items-center justify-center text-violet-500 mx-auto border border-violet-500/10">
                <Lock size={32} />
             </div>
             <div>
@@ -199,12 +263,12 @@ const App: React.FC = () => {
             </div>
             <input 
               type="password" placeholder="••••" autoFocus 
-              className="w-full p-4 rounded-xl bg-black/20 border border-white/10 text-white outline-none focus:border-emerald-500 text-center text-2xl tracking-[0.5em]"
+              className="w-full p-4 rounded-xl bg-black/20 border border-white/10 text-white outline-none focus:border-violet-500 text-center text-2xl tracking-[0.5em]"
               onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(e.currentTarget.value); }}
             />
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setIsAuthModalOpen(false)} className="py-3 rounded-xl text-[10px] font-bold text-slate-400 hover:bg-white/5">BATAL</button>
-              <button onClick={(e) => handleLogin((e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement).value)} className="py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-[10px]">MASUK</button>
+              <button onClick={(e) => handleLogin((e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement).value)} className="py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-[10px]">MASUK</button>
             </div>
           </div>
         </div>

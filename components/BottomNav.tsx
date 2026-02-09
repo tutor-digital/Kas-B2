@@ -31,7 +31,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, onOpenFor
       <div className="relative -top-5">
         <button 
           onClick={onOpenForm}
-          className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
+          className="w-14 h-14 rounded-full bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-600/30 active:scale-95 transition-transform"
         >
           <PlusCircle size={28} />
         </button>

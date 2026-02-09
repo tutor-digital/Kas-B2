@@ -21,18 +21,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, sele
   const selectedClass = classes.find(c => c.id === selectedClassId);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-72 bg-[#0b0e14] border-r border-white/5 hidden md:flex flex-col z-[90]">
+    <aside className="fixed left-0 top-0 h-screen w-72 bg-[#110e1b] border-r border-white/5 hidden md:flex flex-col z-[90]">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-10">
-              <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-emerald-500/20">K</div>
+              <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-violet-600/20">K</div>
               <div>
                 <h1 className="text-white font-black text-lg tracking-tight">Kas Pintar</h1>
-                <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Web Dashboard</span>
+                <span className="text-[10px] text-violet-500 font-bold uppercase tracking-widest">Web Dashboard</span>
               </div>
           </div>
 
           <div className="w-full flex items-center justify-between px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black text-slate-300 uppercase tracking-widest mb-6">
-            <div className="flex items-center gap-2"><School size={14} className="text-emerald-500" /> {selectedClass?.name}</div>
+            <div className="flex items-center gap-2"><School size={14} className="text-violet-500" /> {selectedClass?.name}</div>
             <ChevronDown size={14} />
           </div>
         
@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, classes, sele
                     <button
                     onClick={() => onTabChange(item.id)}
                     className={`w-full flex items-center gap-4 px-5 py-3 rounded-xl transition-all ${
-                        activeTab === item.id ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'text-slate-500 hover:text-white hover:bg-white/5'
+                        activeTab === item.id ? 'bg-violet-600/10 text-violet-500 border border-violet-500/20' : 'text-slate-500 hover:text-white hover:bg-white/5'
                     }`}
                     >
                     <div className="shrink-0">{item.icon}</div>

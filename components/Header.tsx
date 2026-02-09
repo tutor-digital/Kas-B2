@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 overflow-hidden">
            <img 
-             src="https://ui-avatars.com/api/?name=Admin+Kas&background=10b981&color=fff" 
+             src="https://ui-avatars.com/api/?name=Admin+Kas&background=8b5cf6&color=fff" 
              alt="Profile" 
              className="w-full h-full object-cover"
            />
@@ -30,9 +30,9 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
         </div>
       </div>
 
-      <button className="w-10 h-10 rounded-full bg-[#151a23] border border-white/5 flex items-center justify-center text-slate-300 relative">
+      <button className="w-10 h-10 rounded-full bg-[#1e1b2e] border border-white/5 flex items-center justify-center text-slate-300 relative">
         <Bell size={18} />
-        <div className="absolute top-2.5 right-3 w-2 h-2 bg-rose-500 rounded-full border border-[#151a23]"></div>
+        <div className="absolute top-2.5 right-3 w-2 h-2 bg-rose-500 rounded-full border border-[#1e1b2e]"></div>
       </button>
     </div>
   );
