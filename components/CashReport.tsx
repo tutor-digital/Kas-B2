@@ -62,7 +62,8 @@ const CashReport: React.FC<CashReportProps> = ({ stats, selectedClass, initialBa
   // --- LOGIKA 2: Laporan Mutasi Bulanan (Monthly Ledger) ---
   const monthlyMutations = useMemo(() => {
     // 1. Hitung Total Saldo Awal Global (Semua Kantong)
-    const totalInitialBalance = Object.values(initialBalances).reduce((acc: number, val: number) => acc + val, 0);
+    // Fixed: Explicitly cast Object.values(initialBalances) to number[] to avoid 'unknown' type error in reduce
+    const totalInitialBalance = (Object.values(initialBalances) as number[]).reduce((acc: number, val: number) => acc + val, 0);
 
     // 2. Urutkan transaksi dari TERLAMA ke TERBARU untuk menghitung saldo berjalan
     const sortedTx = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

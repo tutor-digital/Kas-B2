@@ -4,12 +4,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#050a1a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Kas B2" />
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png" />
-    <link rel="manifest" href="/public/manifest.json" />
     
     <title>Kas B2 - Manajemen Kas Kelas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -29,21 +28,13 @@
       }
     }
     </script>
+    <style>
+      body { background-color: #000; margin: 0; padding: 0; }
+    </style>
   <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-slate-50">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/public/sw.js').then(reg => {
-            console.log('SW terdaftar:', reg);
-          }).catch(err => {
-            console.log('SW gagal:', err);
-          });
-        });
-      }
-    </script>
   </body>
 </html>

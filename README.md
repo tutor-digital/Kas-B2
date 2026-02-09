@@ -1,20 +1,31 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# Kas B2 - Premium School Cash
 
-This contains everything you need to run your app locally.
+Aplikasi manajemen uang kas kelas dengan tampilan modern (AlimBank Style), fitur AI, dan integrasi Database Cloud.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1vnlS7oOIUPN5PhsCy7MbA_t63niNtW9Q
+## Fitur Terbaru (v2.0 - AlimBank Redesign)
+- **Mobile First Design**: Navigasi pindah ke bawah (Bottom Bar) agar mudah dijangkau satu tangan.
+- **Premium Dark Mode**: Warna dasar `Deep Navy` (#0b0e14) yang elegan dan nyaman di mata.
+- **Kartu Saldo Emerald**: Tampilan saldo utama yang ikonik dengan akses cepat.
+- **Glassmorphism Reports**: Laporan & Admin panel menggunakan kartu semi-transparan yang bersih.
+- **Privasi Saldo**: Fitur sensor saldo (Eye Toggle) di halaman depan.
 
-## Run Locally
+## Cara Update ke GitHub
 
-**Prerequisites:**  Node.js
+Jika Anda sudah puas dengan tampilan ini, jalankan perintah berikut di Terminal:
 
+1. **Simpan semua perubahan**
+   ```bash
+   git add .
+   ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+2. **Beri label penyimpanan (Commit)**
+   ```bash
+   git commit -m "Redesign tampilan total: Style AlimBank Dark Mode"
+   ```
+
+3. **Kirim ke GitHub (Push)**
+   ```bash
+   git push origin main
+   ```
+   *(Catatan: Jika branch Anda bernama `master`, ganti `main` dengan `master`)*

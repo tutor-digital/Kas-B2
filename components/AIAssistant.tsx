@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Bot, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { Sparkles, X, Loader2, ArrowRight } from 'lucide-react';
 import { getFinancialInsights } from '../services/geminiService';
 import { Transaction } from '../types';
 
@@ -11,6 +11,9 @@ interface AIAssistantProps {
 const AIAssistant: React.FC<AIAssistantProps> = ({ transactions }) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) return null;
 
   const generateReport = async () => {
     if (transactions.length === 0) return;
@@ -21,55 +24,37 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions }) => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white shadow-xl">
-      <div className="flex flex-col md:flex-row items-center gap-8">
+    <div className="relative glass-card bg-indigo-600/20 border-indigo-500/30 rounded-[2.5rem] p-6 mb-10 overflow-hidden animate-in zoom-in-95 duration-500">
+      <button onClick={() => setIsVisible(false)} className="absolute top-4 right-4 text-white/40 hover:text-white">
+        <X size={18} />
+      </button>
+
+      <div className="flex gap-4">
+        <div className="shrink-0 w-12 h-12 flex items-center justify-center text-amber-400">
+          <Sparkles size={28} className="animate-pulse" />
+        </div>
         <div className="flex-1">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-              <Bot size={28} />
-            </div>
-            <h2 className="text-2xl font-bold">AI Konsultan Kas Kelas</h2>
-          </div>
-          <p className="text-indigo-100 text-lg mb-6 leading-relaxed">
-            Dapatkan wawasan cerdas tentang kesehatan keuangan kelasmu. 
-            AI kami akan menganalisis tren pengeluaran dan memberikan rekomendasi penghematan.
+          <h3 className="text-white font-bold text-sm mb-1">Cek kesehatan kas dengan AI!</h3>
+          <p className="text-slate-400 text-xs leading-relaxed mb-4">
+            Dapatkan rekomendasi cerdas dan analisis penggunaan uang kas kelas secara otomatis.
           </p>
           
-          {loading ? (
-            <div className="flex items-center gap-3 py-4">
-              <Loader2 className="animate-spin" />
-              <span className="font-medium">Menganalisis transaksi Anda...</span>
+          {insight ? (
+            <div className="mt-4 p-4 bg-white/5 rounded-2xl text-[11px] text-slate-200 border border-white/5 leading-relaxed italic">
+              {insight.length > 150 ? insight.substring(0, 150) + '...' : insight}
             </div>
           ) : (
-            <button
+            <button 
               onClick={generateReport}
-              disabled={transactions.length === 0}
-              className={`flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-2xl font-bold transition-all shadow-lg hover:bg-indigo-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={loading || transactions.length === 0}
+              className="flex items-center gap-2 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-indigo-300 transition-colors"
             >
-              {insight ? <RefreshCw size={20} /> : <Sparkles size={20} />}
-              {insight ? 'Perbarui Analisis' : 'Mulai Analisis Sekarang'}
+              {loading ? <Loader2 size={14} className="animate-spin" /> : "Mulai Analisis"}
+              <ArrowRight size={14} />
             </button>
           )}
         </div>
-        
-        <div className="hidden lg:block w-48 h-48 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center animate-pulse">
-            <Bot size={80} className="text-white/60" />
-        </div>
       </div>
-
-      {insight && !loading && (
-        <div className="mt-10 bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="prose prose-invert max-w-none text-indigo-50">
-            {insight.split('\n').map((line, i) => (
-              <p key={i} className="mb-2 leading-relaxed">{line}</p>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {transactions.length === 0 && (
-        <p className="mt-4 text-xs text-indigo-200/60 italic">*Tambahkan setidaknya satu transaksi untuk memulai analisis.</p>
-      )}
     </div>
   );
 };

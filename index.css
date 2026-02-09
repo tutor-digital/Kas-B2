@@ -4,87 +4,49 @@
 @tailwind utilities;
 
 @layer base {
-  body {
+  :root {
+    --bg-primary: #0b0e14; /* Deep Navy Black */
+    --card-bg: #151a23;     /* Slightly lighter for cards */
+    --accent-green: #10b981;
+  }
+
+  html, body {
+    background-color: var(--bg-primary);
+    color: white;
     margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-smoothing: grayscale;
-    background-color: #e0f2fe;
-    background-image: 
-      radial-gradient(at 0% 100%, #bae6fd 0px, transparent 50%),
-      radial-gradient(at 100% 0%, #fef08a 0px, transparent 50%);
     overflow-x: hidden;
-    /* Mencegah seleksi teks yang tidak diinginkan di mobile app */
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
+  }
+
+  /* Hide scrollbar for clean look */
+  ::-webkit-scrollbar {
+    display: none;
   }
 }
 
-/* Mengizinkan seleksi teks hanya pada input dan tabel laporan */
-input, textarea, .prose, table {
-  user-select: text;
+/* AlimBank Style Green Card */
+.alim-card {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4);
 }
 
-.bg-kids-pattern {
-  position: relative;
-  min-height: 100vh;
+.nav-item-active {
+  color: #10b981;
 }
 
-/* Animasi Awan */
-.cloud {
-  position: fixed;
-  background: white;
-  border-radius: 100px;
-  opacity: 0.6;
-  z-index: -1;
-  filter: blur(20px);
-  animation: float-horizontal 40s linear infinite;
+.nav-item-inactive {
+  color: #64748b;
 }
 
-@keyframes float-horizontal {
-  from { transform: translateX(-200px); }
-  to { transform: translateX(110vw); }
+/* Glass effect for bottom nav */
+.bottom-nav {
+  background: rgba(21, 26, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Matahari */
-.sun-bg {
-  position: fixed;
-  top: 40px;
-  right: 10%;
-  width: 150px;
-  height: 150px;
-  background: radial-gradient(circle, #fde047 0%, #fbbf24 100%);
-  border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.4;
-  z-index: -1;
-  animation: pulse-sun 10s ease-in-out infinite alternate;
-}
-
-@keyframes pulse-sun {
-  from { transform: scale(1); opacity: 0.3; }
-  to { transform: scale(1.3); opacity: 0.5; }
-}
-
-.rounded-kids {
-  border-radius: 2.5rem;
-}
-
-/* Custom Scrollbar Ceria */
-::-webkit-scrollbar {
-  width: 10px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-::-webkit-scrollbar-thumb {
-  background: #bae6fd;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #7dd3fc;
-}
-
-/* Mencegah pull-to-refresh di beberapa browser mobile agar terasa seperti app asli */
-html, body {
-  overscroll-behavior-y: contain;
+.light-mode-content {
+  color: #1e293b;
 }

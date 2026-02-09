@@ -1,15 +1,18 @@
 
-import React from 'react';
-import { Coins, TrendingUp, TrendingDown, Wallet, LayoutGrid } from 'lucide-react';
-import { SummaryStats, SchoolClass } from '../types';
+import React, { useState } from 'react';
+import { Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Wallet, Receipt, ChevronRight } from 'lucide-react';
+import { SummaryStats, SchoolClass, TransactionType } from '../types';
 
 interface StatsCardsProps {
   stats: SummaryStats;
   selectedClass: SchoolClass;
-  initialBalances: Record<string, number>;
+  onOpenForm: (type?: TransactionType) => void;
+  onNavigate: (tab: string) => void;
 }
 
-const StatsCards: React.FC<StatsCardsProps> = ({ stats, selectedClass, initialBalances }) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ stats, selectedClass, onOpenForm, onNavigate }) => {
+  const [showBalance, setShowBalance] = useState(true);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -19,65 +22,71 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, selectedClass, initialBa
   };
 
   return (
-    <div className="space-y-8 mb-10">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="relative group overflow-hidden bg-white p-7 rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 transition-all hover:-translate-y-1">
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-5">
-              <div className="p-3.5 bg-slate-900 text-white rounded-2xl"><Coins size={24} /></div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full">Total Saldo</span>
-            </div>
-            <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Saldo Keseluruhan</h3>
-            <p className="text-3xl font-black text-slate-900 mt-1">{formatCurrency(stats.totalBalance)}</p>
-          </div>
-        </div>
+    <div className="w-full mb-6">
+      {/* THE GREEN CARD */}
+      <div className="alim-card rounded-[2rem] p-6 relative overflow-hidden text-white mb-6">
+        {/* Decorative Circles */}
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/5 rounded-full blur-xl"></div>
 
-        <div className="relative group overflow-hidden bg-gradient-to-br from-emerald-400 to-emerald-600 p-7 rounded-[2.5rem] shadow-xl text-white transition-all hover:-translate-y-1">
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-5">
-              <div className="p-3.5 bg-white/20 backdrop-blur-xl rounded-2xl"><TrendingUp size={24} /></div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-50 bg-white/10 px-3 py-1.5 rounded-full">Pemasukan</span>
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <p className="text-emerald-100 text-xs font-medium mb-1 flex items-center gap-2">
+                Total Saldo Kas
+                <button onClick={() => setShowBalance(!showBalance)} className="opacity-70 hover:opacity-100">
+                  {showBalance ? <Eye size={14} /> : <EyeOff size={14} />}
+                </button>
+              </p>
+              <h2 className="text-3xl font-bold tracking-tight">
+                {showBalance ? formatCurrency(stats.totalBalance) : 'Rp ••••••••'}
+              </h2>
             </div>
-            <h3 className="text-emerald-50/80 text-[10px] font-black uppercase tracking-widest">Total Uang Masuk</h3>
-            <p className="text-3xl font-black mt-1">{formatCurrency(stats.totalIncome)}</p>
-          </div>
-        </div>
-
-        <div className="relative group overflow-hidden bg-gradient-to-br from-rose-400 to-rose-600 p-7 rounded-[2.5rem] shadow-xl text-white transition-all hover:-translate-y-1">
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-5">
-              <div className="p-3.5 bg-white/20 backdrop-blur-xl rounded-2xl"><TrendingDown size={24} /></div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-rose-50 bg-white/10 px-3 py-1.5 rounded-full">Pengeluaran</span>
+            <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+               <Wallet size={20} className="text-white" />
             </div>
-            <h3 className="text-rose-50/80 text-[10px] font-black uppercase tracking-widest">Total Uang Keluar</h3>
-            <p className="text-3xl font-black mt-1">{formatCurrency(stats.totalExpense)}</p>
           </div>
-        </div>
-      </div>
 
-      <div className={`grid grid-cols-1 md:grid-cols-${Math.min(selectedClass.funds.length, 2)} gap-8`}>
-        {selectedClass.funds.map(fund => (
-          <div key={fund.id} className={`relative overflow-hidden bg-white p-8 rounded-[3rem] shadow-xl border-4 ${fund.id === 'anak' ? 'border-indigo-100' : 'border-purple-100'} group transition-all hover:scale-[1.01]`}>
-            <div className="relative z-10">
-              <div className="flex items-center gap-4 mb-6">
-                 <div className={`p-4 rounded-3xl ${fund.id === 'anak' ? 'bg-indigo-50 text-indigo-600' : 'bg-purple-50 text-purple-600'}`}>
-                    <Wallet size={32} />
-                 </div>
-                 <div className="flex-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dana Terpisah</span>
-                    <h4 className={`text-2xl font-black tracking-tight ${fund.id === 'anak' ? 'text-indigo-600' : 'text-purple-600'}`}>{fund.name.toUpperCase()}</h4>
-                 </div>
+          <div className="mt-1 mb-6 flex items-center gap-2">
+            <span className="text-[10px] bg-black/10 px-2 py-1 rounded-lg text-emerald-50 font-medium">
+              {selectedClass.name}
+            </span>
+            <span className="text-[10px] bg-black/10 px-2 py-1 rounded-lg text-emerald-50 font-medium">
+              Dana Perpisahan: {showBalance ? formatCurrency(stats.fundBalances['perpisahan'] || 0) : '•••'}
+            </span>
+          </div>
+
+          {/* Quick Actions Grid */}
+          <div className="grid grid-cols-4 gap-2">
+            <button onClick={() => onOpenForm(TransactionType.INCOME)} className="flex flex-col items-center gap-2 group">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm group-active:scale-90 transition-all border border-white/10">
+                <ArrowDownLeft size={20} />
               </div>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-4xl font-black text-slate-800 tracking-tighter">{formatCurrency(stats.fundBalances[fund.id] || 0)}</p>
-                  <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Saldo Awal: {formatCurrency(initialBalances[fund.id] || 0)}</p>
-                </div>
-                <LayoutGrid className="text-slate-100" size={48} />
+              <span className="text-[10px] font-medium text-emerald-50">Masuk</span>
+            </button>
+
+            <button onClick={() => onOpenForm(TransactionType.EXPENSE)} className="flex flex-col items-center gap-2 group">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm group-active:scale-90 transition-all border border-white/10">
+                <ArrowUpRight size={20} />
               </div>
-            </div>
+              <span className="text-[10px] font-medium text-emerald-50">Keluar</span>
+            </button>
+
+            <button onClick={() => onNavigate('checklist')} className="flex flex-col items-center gap-2 group">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm group-active:scale-90 transition-all border border-white/10">
+                <Receipt size={20} />
+              </div>
+              <span className="text-[10px] font-medium text-emerald-50">Ceklis</span>
+            </button>
+
+            <button onClick={() => onNavigate('report')} className="flex flex-col items-center gap-2 group">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm group-active:scale-90 transition-all border border-white/10">
+                <ChevronRight size={20} />
+              </div>
+              <span className="text-[10px] font-medium text-emerald-50">Laporan</span>
+            </button>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
