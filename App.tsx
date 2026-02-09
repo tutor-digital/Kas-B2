@@ -104,6 +104,31 @@ const App: React.FC = () => {
     setFormType(type);
     setIsFormOpen(true);
   };
+  
+  const handleAddTransaction = async (tx: Omit<Transaction, 'id' | 'classId'>) => {
+    const dbPayload = {
+      class_id: selectedClassId,
+      date: tx.date,
+      description: tx.description,
+      amount: tx.amount,
+      type: tx.type,
+      fund_id: tx.fundId,
+      category: tx.category,
+      recorded_by: tx.recordedBy,
+      student_name: tx.studentName,
+      attachment_url: tx.attachmentUrl,
+      payment_date: tx.paymentDate
+    };
+    
+    const { error } = await supabase.from('transactions').insert([dbPayload]);
+    if (error) {
+       console.error("Error saving:", error);
+       alert("Gagal menyimpan data: " + error.message);
+    } else {
+       fetchData();
+       setIsFormOpen(false);
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -279,7 +304,7 @@ const App: React.FC = () => {
           funds={selectedClass.funds} students={selectedClass.students} splitRule={selectedClass.splitRule} 
           defaultType={formType}
           initialData={undefined}
-          onAdd={(tx) => { supabase.from('transactions').insert([{ ...tx, class_id: selectedClassId }]).then(() => { fetchData(); setIsFormOpen(false); }); }} 
+          onAdd={handleAddTransaction}
           onClose={() => setIsFormOpen(false)} 
         />
       )}
