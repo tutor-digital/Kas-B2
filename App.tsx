@@ -20,6 +20,17 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Helper untuk generate UUID jika database tidak otomatis membuatnya
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const DEFAULT_FUNDS: Fund[] = [
   { id: 'anak', name: 'Kas Anak', color: 'sky', isMain: true },
   { id: 'perpisahan', name: 'Kas Perpisahan', color: 'purple', isMain: false }
@@ -107,6 +118,7 @@ const App: React.FC = () => {
   
   const handleAddTransaction = async (tx: Omit<Transaction, 'id' | 'classId'>) => {
     const dbPayload = {
+      id: generateUUID(), // Generate UUID di client
       class_id: selectedClassId,
       date: tx.date,
       description: tx.description,
