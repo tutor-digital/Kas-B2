@@ -42,7 +42,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onDel
                 <div className="overflow-hidden">
                   <h4 className="text-sm font-semibold text-white truncate w-40 md:w-auto">{t.description}</h4>
                   <p className="text-[10px] text-slate-400 mt-0.5">
-                    {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {t.category}
+                    {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {t.category} • <span className="text-violet-400 font-medium">{t.fundId === 'gabungan' ? 'Gabungan' : (funds.find(f => f.id === t.fundId)?.name || t.fundId)}</span>
                   </p>
                 </div>
               </div>

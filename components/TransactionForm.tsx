@@ -43,7 +43,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
         description: initialData.description || '',
         amount: initialData.amount !== undefined ? initialData.amount.toString() : '',
         type: initialData.type,
-        fundId: initialData.fundId || funds[0]?.id || 'anak',
+        fundId: initialData.fundId || (splitRule.enabled && initialData.category === splitRule.category ? 'gabungan' : (funds[0]?.id || 'anak')),
         category: initialData.category || Category.DUES,
         date: initialData.date || new Date().toISOString().split('T')[0],
         recordedBy: initialData.recordedBy || 'Bendahara',
@@ -64,10 +64,25 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
         
         // Ensure type respects defaultType if initialData is not present
         if (!initialData) {
-            setFormData(prev => ({ ...prev, type: defaultType }));
+            setFormData(prev => ({ 
+              ...prev, 
+              type: defaultType,
+              fundId: splitRule.enabled && prev.category === splitRule.category && defaultType === TransactionType.INCOME ? 'gabungan' : (funds[0]?.id || 'anak')
+            }));
         }
     }
-  }, [initialData, defaultType, funds]);
+  }, [initialData, defaultType, funds, splitRule]);
+
+  // Auto-switch fundId when category or type changes
+  useEffect(() => {
+    if (!initialData && splitRule.enabled) {
+      if (formData.category === splitRule.category && formData.type === TransactionType.INCOME) {
+        setFormData(prev => ({ ...prev, fundId: 'gabungan' }));
+      } else if (formData.fundId === 'gabungan' && (formData.category !== splitRule.category || formData.type !== TransactionType.INCOME)) {
+        setFormData(prev => ({ ...prev, fundId: funds[0]?.id || 'anak' }));
+      }
+    }
+  }, [formData.category, formData.type, splitRule, initialData, funds]);
 
   const toggleMonth = (idx: number) => {
     if (initialData) return;
@@ -195,23 +210,28 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ funds, students, spli
           </div>
 
           <div className="space-y-4">
-            {/* Source Fund (Expense only) */}
-            {formData.type === TransactionType.EXPENSE && (
-               <div className="animate-in slide-in-from-top-2 duration-300">
-                  <label className="block text-[10px] font-black text-rose-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-2">
-                     <Wallet size={12} /> Sumber Dana
-                  </label>
-                  <select
-                    value={formData.fundId}
-                    onChange={(e) => setFormData({ ...formData, fundId: e.target.value })}
-                    className="w-full px-5 py-4 rounded-2xl border border-rose-500/30 bg-rose-900/10 focus:border-rose-500 outline-none transition-all font-black text-rose-200 text-[11px] uppercase tracking-wider cursor-pointer"
-                  >
-                    {funds.map(f => (
-                      <option key={f.id} value={f.id} className="bg-[#1e1b2e]">{f.name}</option>
-                    ))}
-                  </select>
-               </div>
-            )}
+            {/* Fund Selection */}
+            <div className="animate-in slide-in-from-top-2 duration-300">
+                <label className={`block text-[10px] font-black mb-2 uppercase tracking-widest ml-1 flex items-center gap-2 ${formData.type === TransactionType.INCOME ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <Wallet size={12} /> {formData.type === TransactionType.INCOME ? 'Masuk ke Kantong' : 'Sumber Dana'}
+                </label>
+                <select
+                value={formData.fundId}
+                onChange={(e) => setFormData({ ...formData, fundId: e.target.value })}
+                className={`w-full px-5 py-4 rounded-2xl border bg-[#110e1b] outline-none transition-all font-black text-[11px] uppercase tracking-wider cursor-pointer ${
+                    formData.type === TransactionType.INCOME 
+                    ? 'border-emerald-500/30 text-emerald-200 focus:border-emerald-500' 
+                    : 'border-rose-500/30 text-rose-200 focus:border-rose-500'
+                }`}
+                >
+                {funds.map(f => (
+                    <option key={f.id} value={f.id} className="bg-[#1e1b2e]">{f.name}</option>
+                ))}
+                {splitRule.enabled && (
+                    <option value="gabungan" className="bg-[#1e1b2e]">Gabungan (Split 50/50)</option>
+                )}
+                </select>
+            </div>
 
             {/* Category */}
             <div>
