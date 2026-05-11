@@ -88,9 +88,22 @@ const App: React.FC = () => {
     selectedClass.funds.forEach(f => {
       const base = initialBalances[f.id] || 0;
       const txSum = transactions.reduce((sum, t) => {
+        const isSplitCategory = selectedClass.splitRule.enabled && t.category === selectedClass.splitRule.category;
+        
+        if (isSplitCategory) {
+          if (selectedClass.splitRule.targetFundIds.includes(f.id)) {
+            const splitAmount = t.amount * (selectedClass.splitRule.ratio || 0.5);
+            return t.type === TransactionType.INCOME ? sum + splitAmount : sum - splitAmount;
+          }
+          return sum;
+        }
+
         if (t.fundId === f.id) return t.type === TransactionType.INCOME ? sum + t.amount : sum - t.amount;
+        
+        // Legacy/Explicit support for 'gabungan' fundId
         if (t.fundId === 'gabungan' && selectedClass.splitRule.targetFundIds.includes(f.id)) {
-          return t.type === TransactionType.INCOME ? sum + (t.amount * 0.5) : sum - (t.amount * 0.5);
+          const splitAmount = t.amount * (selectedClass.splitRule.ratio || 0.5);
+          return t.type === TransactionType.INCOME ? sum + splitAmount : sum - splitAmount;
         }
         return sum;
       }, 0);
@@ -235,7 +248,7 @@ const App: React.FC = () => {
         return (
           <div className="pt-2 animate-in slide-in-from-right duration-300">
              <h2 className="text-xl font-bold mb-4">Semua Transaksi</h2>
-             <TransactionTable transactions={transactions} funds={selectedClass.funds} isAdmin={isAdminAuthenticated} enableFilter onEdit={() => {}} onDelete={() => {}} />
+             <TransactionTable transactions={transactions} funds={selectedClass.funds} splitRule={selectedClass.splitRule} isAdmin={isAdminAuthenticated} enableFilter onEdit={() => {}} onDelete={() => {}} />
           </div>
         );
       case 'report':

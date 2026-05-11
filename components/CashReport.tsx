@@ -24,18 +24,36 @@ const CashReport: React.FC<CashReportProps> = ({ stats, selectedClass, initialBa
     
     const debet = transactions.reduce((sum, t) => {
       if (t.type !== TransactionType.INCOME) return sum;
+
+      const isSplitCategory = selectedClass.splitRule.enabled && t.category === selectedClass.splitRule.category;
+      if (isSplitCategory) {
+        if (selectedClass.splitRule.targetFundIds.includes(fund.id)) {
+          return sum + (t.amount * (selectedClass.splitRule.ratio || 0.5));
+        }
+        return sum;
+      }
+
       if (t.fundId === fund.id) return sum + t.amount;
       if (t.fundId === 'gabungan' && selectedClass.splitRule.targetFundIds.includes(fund.id)) {
-        return sum + (t.amount * 0.5);
+        return sum + (t.amount * (selectedClass.splitRule.ratio || 0.5));
       }
       return sum;
     }, 0);
 
     const kredit = transactions.reduce((sum, t) => {
       if (t.type !== TransactionType.EXPENSE) return sum;
+
+      const isSplitCategory = selectedClass.splitRule.enabled && t.category === selectedClass.splitRule.category;
+      if (isSplitCategory) {
+        if (selectedClass.splitRule.targetFundIds.includes(fund.id)) {
+          return sum + (t.amount * (selectedClass.splitRule.ratio || 0.5));
+        }
+        return sum;
+      }
+
       if (t.fundId === fund.id) return sum + t.amount;
       if (t.fundId === 'gabungan' && selectedClass.splitRule.targetFundIds.includes(fund.id)) {
-        return sum + (t.amount * 0.5);
+        return sum + (t.amount * (selectedClass.splitRule.ratio || 0.5));
       }
       return sum;
     }, 0);

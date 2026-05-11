@@ -1,18 +1,19 @@
 
 import React from 'react';
-import { Transaction, TransactionType, Fund } from '../types';
+import { Transaction, TransactionType, Fund, SplitRule } from '../types';
 import { ArrowUpRight, ArrowDownLeft, Trash2, Edit2 } from 'lucide-react';
 
 interface TransactionTableProps {
   transactions: Transaction[];
   funds: Fund[];
+  splitRule?: SplitRule;
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
   isAdmin: boolean;
   enableFilter?: boolean;
 }
 
-const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, isAdmin }) => {
+const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, splitRule, onDelete, isAdmin }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -42,7 +43,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds
                 <div className="overflow-hidden">
                   <h4 className="text-sm font-semibold text-white truncate w-40 md:w-auto">{t.description}</h4>
                   <p className="text-[10px] text-slate-400 mt-0.5">
-                    {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {t.category} • <span className="text-violet-400 font-medium">{t.fundId === 'gabungan' ? 'Gabungan' : (funds.find(f => f.id === t.fundId)?.name || t.fundId)}</span>
+                    {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {t.category} • <span className="text-violet-400 font-medium">
+                      {(t.fundId === 'gabungan' || (splitRule?.enabled && t.category === splitRule.category)) ? 'Gabungan' : (funds.find(f => f.id === t.fundId)?.name || t.fundId)}
+                    </span>
                   </p>
                 </div>
               </div>
