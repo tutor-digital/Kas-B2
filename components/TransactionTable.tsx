@@ -12,7 +12,7 @@ interface TransactionTableProps {
   enableFilter?: boolean;
 }
 
-const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onDelete, isAdmin }) => {
+const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, funds, onDelete, isAdmin }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
